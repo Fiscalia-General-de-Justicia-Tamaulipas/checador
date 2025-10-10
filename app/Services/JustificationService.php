@@ -273,9 +273,6 @@ class JustificationService
         $employee = $justify->employee;
         DB::beginTransaction();
         try {
-            // * delete the file
-            $this->removeFile($justify->file);
-
             // * delete the record
             $justify->delete();
         } catch (\Throwable $th) {
