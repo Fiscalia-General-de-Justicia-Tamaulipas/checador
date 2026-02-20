@@ -27,10 +27,11 @@ class ReportController extends Controller
      *
      * @return void
      */
-    public function index(){
+    public function index()
+    {
 
         // * get catalogs
-        $generalDirections = GeneralDirection::select('id','name')
+        $generalDirections = GeneralDirection::select('id', 'name')
             ->orderBy('name', 'ASC')
             ->get()
             ->all();
@@ -38,8 +39,8 @@ class ReportController extends Controller
         $generalDirectionId = Auth::user()->general_direction_id;
 
         $breadcrumbs = array(
-            ["name"=> "Inicio", "href"=> "/dashboard"],
-            ["name"=> "Generar reportes", "href"=>""],
+            ["name" => "Inicio", "href" => "/dashboard"],
+            ["name" => "Generar reportes", "href" => ""],
         );
 
         // * get years availables
@@ -56,10 +57,11 @@ class ReportController extends Controller
         ]);
     }
 
-    public function createDailyReport(Request $request) {
+    public function createDailyReport(Request $request)
+    {
 
         // * validate request
-        if( !$request->has('gd') || !$request->has('d') ){
+        if (!$request->has('gd') || !$request->has('d')) {
             return redirect()->back()->withErrors([
                 "message" => "General Direction Id and Date required"
             ])->withInput();
@@ -67,16 +69,16 @@ class ReportController extends Controller
 
 
         // * prepared variables
-        $generalDirection=null;
-        $dateReport = Carbon::parse( $request->query('d') )->format("Y-m-d");
+        $generalDirection = null;
+        $dateReport = Carbon::parse($request->query('d'))->format("Y-m-d");
         $includeAllEmployees = $request->query('a', false);
 
 
         // * generate breadcumbs for the view
         $breadcrumbs = array(
-            ["name"=> "Inicio", "href"=> "/dashboard"],
-            ["name"=> "Generar reportes", "href"=> route('reports.index') ],
-            ["name"=> "Reporte diario de $dateReport", "href"=>""],
+            ["name" => "Inicio", "href" => "/dashboard"],
+            ["name" => "Generar reportes", "href" => route('reports.index')],
+            ["name" => "Reporte diario de $dateReport", "href" => ""],
         );
 
 
@@ -85,10 +87,9 @@ class ReportController extends Controller
 
 
         // * retrive the general_direction based on user level
-        if( $AUTH_USER->level_id == 1 && $request->has('gd') )/*Admin*/{
-            $generalDirection = GeneralDirection::where('id', $request->query('gd') )->first();
-        }
-        else {
+        if ($AUTH_USER->level_id == 1 && $request->has('gd'))/*Admin*/ {
+            $generalDirection = GeneralDirection::where('id', $request->query('gd'))->first();
+        } else {
             $generalDirection = GeneralDirection::where('id', $AUTH_USER->general_direction_id)->first();
         }
 
@@ -97,14 +98,13 @@ class ReportController extends Controller
         return Inertia::render("Reports/Daily", [
             "title" => "Generando reporte diario del " . Carbon::parse($request->query('date'))->format("d M Y"),
             "breadcrumbs" => $breadcrumbs,
-            "report" => Inertia::lazy( fn() => $this->makeDailyReport($AUTH_USER, $dateReport, $generalDirection, $includeAllEmployees) ),
+            "report" => Inertia::lazy(fn() => $this->makeDailyReport($AUTH_USER, $dateReport, $generalDirection, $includeAllEmployees)),
         ]);
-
     }
 
-    public function createMonthlyReport(Request $request) 
+    public function createMonthlyReport(Request $request)
     {
-        if( !$request->has('gd') || !$request->has('y') || !$request->has('m') ){
+        if (!$request->has('gd') || !$request->has('y') || !$request->has('m')) {
             return redirect()->back()->withErrors([
                 "message" => "Selecciona un área, año y mes para generar el reporte."
             ])->withInput();
@@ -114,22 +114,21 @@ class ReportController extends Controller
         $generalDirection = null;
         $year = $request->query('y', 0);
         $month = $request->query('m', 0);
-        $dateReport = Carbon::createFromFormat('Y-m-d', $year.'-'.$month.'-01');
+        $dateReport = Carbon::createFromFormat('Y-m-d', $year . '-' . $month . '-01');
         $includeAllEmployees = $request->query('a', 0) == 1;
         $AUTH_USER = Auth::user();
 
         // * generate breadcumbs for the view
         $breadcrumbs = array(
-            ["name"=> "Inicio", "href"=> "/dashboard"],
-            ["name"=> "Generar reportes", "href"=> route('reports.index') ],
-            ["name"=> "Reporte mensual de " . $dateReport->format('M Y'), "href"=>""],
+            ["name" => "Inicio", "href" => "/dashboard"],
+            ["name" => "Generar reportes", "href" => route('reports.index')],
+            ["name" => "Reporte mensual de " . $dateReport->format('M Y'), "href" => ""],
         );
 
         // * retrive the general_direction based on user level
-        if( $AUTH_USER->level_id == 1 && $request->has('gd') )/*Admin*/{
-            $generalDirection = GeneralDirection::where('id', $request->query('gd') )->first();
-        }
-        else {
+        if ($AUTH_USER->level_id == 1 && $request->has('gd'))/*Admin*/ {
+            $generalDirection = GeneralDirection::where('id', $request->query('gd'))->first();
+        } else {
             $generalDirection = GeneralDirection::where('id', $AUTH_USER->general_direction_id)->first();
         }
 
@@ -144,12 +143,13 @@ class ReportController extends Controller
         ]);
     }
 
-    public function downloadDailyReporte(Request $request, $report_name){
+    public function downloadDailyReporte(Request $request, $report_name)
+    {
 
         $filePath = sprintf("tmp/dailyreports/$report_name");
 
         // * validate if the report exist
-        if( !Storage::disk('local')->exists( $filePath)) {
+        if (!Storage::disk('local')->exists($filePath)) {
             return response()->json([
                 "message" => "El reporte que está tratando de acceder no se encuentra disponible."
             ], 404);
@@ -158,15 +158,15 @@ class ReportController extends Controller
         // * download the file
         $name = "reporte-diario.pdf";
         return Storage::disk('local')->download($filePath, $name);
-
     }
 
-    public function downloadMonthlyReporte(Request $request, $report_name){
+    public function downloadMonthlyReporte(Request $request, $report_name)
+    {
 
         $filePath = sprintf("tmp/monthlyreports/$report_name");
 
         // * validate if the report exist
-        if( !Storage::disk('local')->exists( $filePath)){
+        if (!Storage::disk('local')->exists($filePath)) {
             return response()->json([
                 "message" => "El reporte que está tratando de acceder no se encuentra disponible."
             ], 404);
@@ -177,27 +177,28 @@ class ReportController extends Controller
         return Storage::disk('local')->download($filePath, $name);
     }
 
-    public function verifyMonthlyReporte(Request $request, string $reportId): JsonResponse {
+    public function verifyMonthlyReporte(Request $request, string $reportId): JsonResponse
+    {
         // * attempt to get the report
         $reportData = MonthlyRecord::find($reportId);
 
-        if($reportData == null){
-            return response()->json( [
+        if ($reportData == null) {
+            return response()->json([
                 "message" => "El reporte seleccionado no esta disponible."
             ], 409);
         }
 
         // * attempt to process info attached to the report record
         $reportProcess = $reportData->process;
-        if($reportProcess == null){
-            return response()->json( [
+        if ($reportProcess == null) {
+            return response()->json([
                 "message" => "El reporte seleccionado no esta disponible."
             ], 409);
         }
 
 
         // * verify process status
-        if( $reportProcess->status == "success") {
+        if ($reportProcess->status == "success") {
             // * return the data related to the report created
             $filePath = $reportData->filePath;
 
@@ -211,7 +212,7 @@ class ReportController extends Controller
             $size = Storage::disk('local')->size($filePath);
             $sizeInKB = number_format($size / 1024, 2);
 
-            return response()->json( [
+            return response()->json([
                 "status" => $reportProcess->status,
                 "message" => $reportProcess->output,
                 "reportData" => [
@@ -224,12 +225,11 @@ class ReportController extends Controller
             ], 200);
         }
 
-        return response()->json( [
+        return response()->json([
             "status" => $reportProcess->status,
             "message" => $reportProcess->output,
             "finish" => Carbon::parse($reportProcess->updated_at)->format("H:i:s"),
         ], 200);
-
     }
 
 
@@ -239,7 +239,8 @@ class ReportController extends Controller
      *
      * @return array|null
      */
-    private function makeDailyReport($AUTH_USER, $dateReport, $generalDirection, $includeAllEmployees ){
+    private function makeDailyReport($AUTH_USER, $dateReport, $generalDirection, $includeAllEmployees)
+    {
 
         $now = new \DateTime();
         $reportData = array();
@@ -251,9 +252,9 @@ class ReportController extends Controller
                 date: $dateReport,
                 generalDirectionId: $generalDirection->id,
                 options: [
-                    'directionId' => ($AUTH_USER->level_id > 2) ?$AUTH_USER->direction_id :null,
-                    'subdirectorateId' => ($AUTH_USER->level_id > 3) ?$AUTH_USER->subdirectorate_id :null,
-                    'departmentId' => ($AUTH_USER->level_id > 4) ?$AUTH_USER->department_id :null,
+                    'directionId' => ($AUTH_USER->level_id > 2) ? $AUTH_USER->direction_id : null,
+                    'subdirectorateId' => ($AUTH_USER->level_id > 3) ? $AUTH_USER->subdirectorate_id : null,
+                    'departmentId' => ($AUTH_USER->level_id > 4) ? $AUTH_USER->department_id : null,
                 ],
                 allEmployees: $includeAllEmployees
             );
@@ -262,26 +263,25 @@ class ReportController extends Controller
             // * use the reportData stored if reportData is not off today
             if ($mongoReportRecord && $now->format('Y-m-d') != $dateReport) {
                 $reportData = $mongoReportRecord->data;
-            }
-            else { // Not today and not store data from the selected day
+            } else { // Not today and not store data from the selected day
 
                 // * get the employees associated to the user department
-                $employees = $this->getEmployees( $generalDirection->id, [
-                    'directionId' => ($AUTH_USER->level_id > 2) ?$AUTH_USER->direction_id :null,
-                    'subdirectorateId' => ($AUTH_USER->level_id > 3) ?$AUTH_USER->subdirectorate_id :null,
-                    'departmentId' => ($AUTH_USER->level_id > 4) ?$AUTH_USER->department_id :null,
+                $employees = $this->getEmployees($generalDirection->id, [
+                    'directionId' => ($AUTH_USER->level_id > 2) ? $AUTH_USER->direction_id : null,
+                    'subdirectorateId' => ($AUTH_USER->level_id > 3) ? $AUTH_USER->subdirectorate_id : null,
+                    'departmentId' => ($AUTH_USER->level_id > 4) ? $AUTH_USER->department_id : null,
                 ]);
 
                 // * make dailyReport data
-                $dailyReportFactory = new DailyReportFactory( $employees, $dateReport );
+                $dailyReportFactory = new DailyReportFactory($employees, $dateReport);
                 $reportData = $dailyReportFactory->makeReportData();
 
                 // * attempt to store in mongoDB only if selected day is not today
-                if( Carbon::today()->format('Y-m-d') != $dateReport ) {
+                if (Carbon::today()->format('Y-m-d') != $dateReport) {
                     try {
                         $recordMongo = new \App\Models\DailyRecord();
                         $recordMongo->general_direction_id = $generalDirection->id;
-                        if( $AUTH_USER->level_id != 1) {
+                        if ($AUTH_USER->level_id != 1) {
                             $recordMongo->direction_id = $AUTH_USER->direction_id;
                             $recordMongo->subdirectorate_id = $AUTH_USER->subdirectorate_id;
                             $recordMongo->department_id = $AUTH_USER->department_id;
@@ -294,12 +294,11 @@ class ReportController extends Controller
                         Log::error($th->getMessage());
                     }
                 }
-
             }
 
 
             // * make pdf and stored
-            $dailyReportFactory = new DailyReportPdfFactory( $reportData, $dateReport, $generalDirection->name );
+            $dailyReportFactory = new DailyReportPdfFactory($reportData, $dateReport, $generalDirection->name);
             $dailyReportFactory->makePdf();
             $pdfStringContent = $dailyReportFactory->Output('S');
 
@@ -309,11 +308,11 @@ class ReportController extends Controller
             }
 
             // * store pdf
-            $fileName = sprintf("%s.pdf", (string) Str::uuid() );
+            $fileName = sprintf("%s.pdf", (string) Str::uuid());
             $filePath = sprintf("tmp/dailyreports/$fileName");
-            if( Storage::disk('local')->put( $filePath, $pdfStringContent ) ){
+            if (Storage::disk('local')->put($filePath, $pdfStringContent)) {
                 Log::info('User ' . $AUTH_USER->name . ' generate daily report for date ' . $dateReport);
-            }else {
+            } else {
                 Log::warning('Fail at stored the pdf of the daily report by User ' . $AUTH_USER->name . ' for date ' . $dateReport);
             }
 
@@ -327,7 +326,6 @@ class ReportController extends Controller
                 "userName" => $AUTH_USER->name,
                 "size" => $sizeInKB . " KB"
             ];
-
         } catch (\Throwable $th) {
             Log::error("Fail to generate the daily report of day {date}: {message}", [
                 "date" => $dateReport,
@@ -338,7 +336,6 @@ class ReportController extends Controller
                 "error" => "Error al generar el reporte diario del día '$dateReport' intente de nuevo o comuníquese con el administrador."
             ];
         }
-
     }
 
     /**
@@ -350,32 +347,33 @@ class ReportController extends Controller
      * @param  bool $includeAllEmployees
      * @return MonthlyRecord
      */
-    private function makeMonthlyReport($AUTH_USER, $dateReport, $generalDirection, $includeAllEmployees ){
+    private function makeMonthlyReport($AUTH_USER, $dateReport, $generalDirection, $includeAllEmployees)
+    {
 
         // * create a mongo monthy report record
         $reportData = new MonthlyRecord([
-            'general_direction_id'=> $generalDirection->id,
+            'general_direction_id' => $generalDirection->id,
             'year' => $dateReport->year,
             'month' => $dateReport->month,
             'all_employees' => $includeAllEmployees,
             'filePath' => null
         ]);
-        if($AUTH_USER->level_id > 2){
+        if ($AUTH_USER->level_id > 2) {
             $reportData->general_direction_id = $AUTH_USER->direction_id;
         }
-        if($AUTH_USER->level_id > 3){
+        if ($AUTH_USER->level_id > 3) {
             $reportData->subdirectorate_id = $AUTH_USER->subdirectorate_id;
         }
-        if($AUTH_USER->level_id > 4){
+        if ($AUTH_USER->level_id > 4) {
             $reportData->department_id = $AUTH_USER->department_id;
         }
         $reportData->save();
 
         // * get the employees for the report
-        $employees = $this->getEmployees( $generalDirection->id, [
-            'directionId' => ($AUTH_USER->level_id > 2) ?$AUTH_USER->direction_id :null,
-            'subdirectorateId' => ($AUTH_USER->level_id > 3) ?$AUTH_USER->subdirectorate_id :null,
-            'departmentId' => ($AUTH_USER->level_id > 4) ?$AUTH_USER->department_id :null,
+        $employees = $this->getEmployees($generalDirection->id, [
+            'directionId' => ($AUTH_USER->level_id > 2) ? $AUTH_USER->direction_id : null,
+            'subdirectorateId' => ($AUTH_USER->level_id > 3) ? $AUTH_USER->subdirectorate_id : null,
+            'departmentId' => ($AUTH_USER->level_id > 4) ? $AUTH_USER->department_id : null,
         ]);
 
         Log::debug("Dispatching the report queue");
@@ -389,24 +387,59 @@ class ReportController extends Controller
      * @param  mixed $options
      * @return array
      */
-    private function getEmployees( $generalDirectionId, $options ){
+    private function getEmployees($generalDirectionId, $options)
+    {
 
         // * get employees of the current general-direction
         $employeesQuery = Employee::with(['workingHours'])
-            ->select('id', 'general_direction_id', 'direction_id', 'subdirectorate_id', 'department_id', 'plantilla_id', 'name')
+            ->select('id', 'general_direction_id', 'direction_id', 'subdirectorate_id', 'department_id', 'plantilla_id', 'name', 'employee_number')
             ->where('status_id', 1)
-            ->where('active', 1)
-            ->where('general_direction_id', $generalDirectionId);
+            ->where('active', 1);
 
-        if(isset($options['directionId']) ){
+        // * Special business rules for specific General Directions
+        $specialEmployeeNumbers = [
+            20902,
+            10829,
+            48461,
+            7057,
+            20882,
+            24493,
+            28875,
+            22515,
+            30874,
+            15492,
+            26934,
+            35561
+        ];
+
+        // GD = 18: Excluir empleados específicos
+        if ($generalDirectionId == 18) {
+            $employeesQuery->where('general_direction_id', 18)
+                ->whereNotIn('employee_number', $specialEmployeeNumbers);
+        }
+        // GD = 28: Incluir empleados específicos (que normalmente estarían en GD 18)
+        elseif ($generalDirectionId == 28) {
+            $employeesQuery->where(function ($query) use ($specialEmployeeNumbers) {
+                $query->where('general_direction_id', 28)
+                    ->orWhereIn('employee_number', $specialEmployeeNumbers);
+            });
+        }
+        // Resto de GDs: Comportamiento normal
+        else {
+            $employeesQuery->where('general_direction_id', $generalDirectionId);
+        }
+
+        // * Apply hierarchy filters (direction, subdirectorate, department)
+        if (isset($options['directionId'])) {
             $employeesQuery = $employeesQuery->where('direction_id', $options['directionId']);
         }
 
-        if(isset($options['subdirectorateId']) ){
-            $employeesQuery = $employeesQuery->where('subdirectorate_id', $options['directionId']);
+        if (isset($options['subdirectorateId'])) {
+            // CORREGIDO: Ahora usa subdirectorateId en lugar de directionId
+            $employeesQuery = $employeesQuery->where('subdirectorate_id', $options['subdirectorateId']);
         }
 
-        if(isset($options['departmentId']) ){
+        if (isset($options['departmentId'])) {
             $employeesQuery = $employeesQuery->where('department_id', $options['departmentId']);
         }
 
@@ -422,22 +455,23 @@ class ReportController extends Controller
      * @param  bool $allEmployees
      * @return DailyRecord|null
      */
-    private function getDailyReportStored( $date, $generalDirectionId, $options, $allEmployees = false ){
+    private function getDailyReportStored($date, $generalDirectionId, $options, $allEmployees = false)
+    {
 
         // * prepare the query
         $mongoRecordQuery = DailyRecord::where('general_direction_id', $generalDirectionId)
             ->where('report_date', $date)
             ->where('all_employees', $allEmployees);
 
-        if( isset($options['directionId']) ){
+        if (isset($options['directionId'])) {
             $mongoRecordQuery = $mongoRecordQuery->where('direction_id', $options['directionId']);
         }
 
-        if( isset($options['subdirectorateId']) ){
+        if (isset($options['subdirectorateId'])) {
             $mongoRecordQuery = $mongoRecordQuery->where('subdirectorate_id', $options['subdirectorateId']);
         }
 
-        if( isset($options['departmentId']) ){
+        if (isset($options['departmentId'])) {
             $mongoRecordQuery = $mongoRecordQuery->where('department_id', $options['departmentId']);
         }
 
