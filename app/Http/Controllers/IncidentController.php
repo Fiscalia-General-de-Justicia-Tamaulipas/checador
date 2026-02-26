@@ -626,8 +626,11 @@ class IncidentController extends Controller
      * @param  string|Date|Carbon $to
      * @return array<EmployeeViewModel>
      */
-    private function getEmployeesWithIncidentsByDirection($generalDirectionId, $startDate, $endDate)
-    {
+    private function getEmployeesWithIncidentsByDirection(
+        int $generalDirectionId,
+        $startDate,
+        $endDate
+    ) {
         $specialEmployeeNumbers = [
             20902,
             10829,
@@ -643,9 +646,18 @@ class IncidentController extends Controller
             35561
         ];
 
-        $query = Employee::with(['incidents' => function ($q) use ($startDate, $endDate) {
-            $q->whereBetween('date', [$startDate, $endDate]);
-        }])
+        $authUser = Auth::user();
+        $currentLevel = $authUser->level_id;
+
+        $query = Employee::with([
+            'generalDirection',
+            'direction'
+        ])
+            ->withCount([
+                'incidents as totalIncidents' => function ($q) use ($startDate, $endDate) {
+                    $q->whereBetween('date', [$startDate, $endDate]);
+                }
+            ])
             ->where('status_id', 1)
             ->where('active', 1);
 
@@ -667,7 +679,28 @@ class IncidentController extends Controller
             $query->where('general_direction_id', $generalDirectionId);
         }
 
-        return $query->orderBy('name')->get()->toArray();
+        /*
+    |--------------------------------------------------------------------------
+    | Filtro por nivel de usuario (seguridad adicional)
+    |--------------------------------------------------------------------------
+    */
+
+        if ($currentLevel > 1) {
+
+            if ($currentLevel >= 2) {
+                $query->where('general_direction_id', $authUser->general_direction_id);
+            }
+
+            if ($currentLevel >= 3) {
+                $query->where('direction_id', $authUser->direction_id);
+            }
+
+            if ($currentLevel >= 4) {
+                $query->where('subdirectorate_id', $authUser->subdirectorate_id);
+            }
+        }
+
+        return $query->orderBy('name')->get();
     }
 
     /**
