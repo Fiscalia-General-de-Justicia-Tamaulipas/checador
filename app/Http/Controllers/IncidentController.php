@@ -627,10 +627,11 @@ class IncidentController extends Controller
      * @return array<EmployeeViewModel>
      */
     private function getEmployeesWithIncidentsByDirection(
-        int $generalDirectionId,
-        $startDate,
-        $endDate
+        int $generalDirecctionId,
+        $from,
+        $to
     ) {
+
         $specialEmployeeNumbers = [
             20902,
             10829,
@@ -646,63 +647,100 @@ class IncidentController extends Controller
             35561
         ];
 
-        $authUser = Auth::user();
-        $currentLevel = $authUser->level_id;
+        /*
+    |--------------------------------------------------------------------------
+    | Get incidents (con regla especial 18 / 28)
+    |--------------------------------------------------------------------------
+    */
 
-        $query = Employee::with([
+        $incidents = Incident::whereBetween('date', [$from, $to])
+            ->whereHas("employee", function ($employee) use ($generalDirecctionId, $specialEmployeeNumbers) {
+
+                if ($generalDirecctionId == 18) {
+
+                    $employee->where('general_direction_id', 18)
+                        ->whereNotIn('employee_number', $specialEmployeeNumbers);
+                } elseif ($generalDirecctionId == 28) {
+
+                    $employee->where(function ($q) use ($specialEmployeeNumbers) {
+                        $q->where('general_direction_id', 28)
+                            ->orWhereIn('employee_number', $specialEmployeeNumbers);
+                    });
+                } else {
+
+                    $employee->where('general_direction_id', $generalDirecctionId);
+                }
+
+                return $employee;
+            })
+            ->get();
+
+
+        /*
+    |--------------------------------------------------------------------------
+    | Group by employee
+    |--------------------------------------------------------------------------
+    */
+
+        $groupedByEmployee = $incidents->groupBy('employee_id')->all();
+
+
+        /*
+    |--------------------------------------------------------------------------
+    | Get employees
+    |--------------------------------------------------------------------------
+    */
+
+        $employeesQuery = Employee::with([
             'generalDirection',
             'direction'
-        ])
-            ->withCount([
-                'incidents as totalIncidents' => function ($q) use ($startDate, $endDate) {
-                    $q->whereBetween('date', [$startDate, $endDate]);
-                }
-            ])
-            ->where('status_id', 1)
-            ->where('active', 1);
+        ])->whereIn('id', array_keys($groupedByEmployee));
+
 
         /*
     |--------------------------------------------------------------------------
-    | Regla especial GD 18 / 28
+    | Filter employees by user level
     |--------------------------------------------------------------------------
     */
 
-        if ($generalDirectionId == 18) {
-            $query->where('general_direction_id', 18)
-                ->whereNotIn('employee_number', $specialEmployeeNumbers);
-        } elseif ($generalDirectionId == 28) {
-            $query->where(function ($q) use ($specialEmployeeNumbers) {
-                $q->where('general_direction_id', 28)
-                    ->orWhereIn('employee_number', $specialEmployeeNumbers);
-            });
-        } else {
-            $query->where('general_direction_id', $generalDirectionId);
+        if (Auth::user()->level_id > 1) {
+            $employeesOfUser = $this->employeeService->getEmployeesOfUser();
+            $employeesQuery->whereIn(
+                'id',
+                $employeesOfUser->pluck('id')->all()
+            );
         }
+
 
         /*
     |--------------------------------------------------------------------------
-    | Filtro por nivel de usuario (seguridad adicional)
+    | Transform to ViewModel
     |--------------------------------------------------------------------------
     */
 
-        if ($currentLevel > 1) {
+        $employeesRaw = $employeesQuery->get()->all();
 
-            if ($currentLevel >= 2) {
-                $query->where('general_direction_id', $authUser->general_direction_id);
-            }
+        $employees = array_map(function ($employeeData) {
+            return EmployeeViewModel::fromEmployeeModel($employeeData);
+        }, $employeesRaw);
 
-            if ($currentLevel >= 3) {
-                $query->where('direction_id', $authUser->direction_id);
-            }
 
-            if ($currentLevel >= 4) {
-                $query->where('subdirectorate_id', $authUser->subdirectorate_id);
+        /*
+    |--------------------------------------------------------------------------
+    | Append total incidents
+    |--------------------------------------------------------------------------
+    */
+
+        foreach ($employees as &$empl) {
+            try {
+                $empl->totalIncidents = count($groupedByEmployee[$empl->id]);
+            } catch (\Throwable $th) {
+                $empl->totalIncidents = 0;
             }
         }
 
-        return $query->orderBy('name')->get();
+        return $employees;
     }
-
     /**
      * get the resume of incidents of the employee in a period
      *
