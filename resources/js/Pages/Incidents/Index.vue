@@ -299,7 +299,7 @@ function handleMakeIncidentsJob(){
                                     {{ employee.abbreviation }}
                                 </div>
                                 <div class="text-sm text-gray-900">
-                                    {{ employee.direction.name }}
+                                    {{ employee.direction?.name || '-' }}
                                 </div>
                             </td>
 
