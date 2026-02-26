@@ -37,38 +37,38 @@ class IncidentController extends Controller
 
     static $INCIDENT_STATE_PENDING = 1;
 
-    function __construct( EmployeeService $employeeService, EmployeeIncidentInterface $employeeIncidentService) {
+    function __construct(EmployeeService $employeeService, EmployeeIncidentInterface $employeeIncidentService)
+    {
         $this->employeeService = $employeeService;
         $this->employeeIncidentService = $employeeIncidentService;
     }
 
     function index(Request $request)
     {
-        $generalDirecctionId = $request->filled('gdi') ? $request->input("gdi") :intval( Auth::user()->general_direction_id );
+        $generalDirecctionId = $request->filled('gdi') ? $request->input("gdi") : intval(Auth::user()->general_direction_id);
         $repType = $request->filled('t') ? $request->input("t") : 'monthly';
         $year = $request->filled('y') ? $request->input("y") : Carbon::now()->year;
-        if($request->filled('p')){
+        if ($request->filled('p')) {
             $period = $request->query('p');
-        }else{
+        } else {
             // if the period is no passed by parameter make it based on the report type, for type `fortnight` the format of the period is '{month}-{NumQuincena}'
             $period = ($repType == 'monthly') ? Carbon::now()->month : Carbon::now()->month . "-1";
         }
 
         // * get the incidents
         $employees = array();
-        if( $period != null && $generalDirecctionId != null ){
+        if ($period != null && $generalDirecctionId != null) {
             // * prepare options
-            if($repType == 'monthly'){
+            if ($repType == 'monthly') {
                 $startOfMonth = Carbon::parse("$year-$period-01")->startOfDay();
                 $endOfMonth = Carbon::parse("$year-$period-01")->endOfMonth()->endOfDay();
-
-            }else{
+            } else {
                 $month = explode("-", $period)[0];
                 $quin = explode("-", $period)[1];
-                if( $quin == 1){
+                if ($quin == 1) {
                     $startOfMonth = Carbon::parse("$year-$month-01");
                     $endOfMonth = Carbon::parse("$year-$month-15");
-                }else{
+                } else {
                     $startOfMonth = Carbon::parse("$year-$month-16");
                     $endOfMonth = Carbon::parse("$year-$month-01")->endOfMonth()->endOfDay();
                 }
@@ -86,7 +86,7 @@ class IncidentController extends Controller
             "fortnight" => "Quincenal"
         ];
 
-        if($repType == 'monthly'){
+        if ($repType == 'monthly') {
             $periods = [
                 "1"  => "Enero",
                 "2"  => "Febrero",
@@ -103,11 +103,11 @@ class IncidentController extends Controller
             ];
 
             // If current year, only show months up to current month
-            if($year == Carbon::now()->year) {
+            if ($year == Carbon::now()->year) {
                 $currentMonth = Carbon::now()->month;
                 $periods = array_slice($periods, 0, $currentMonth, true);
             }
-        }else{
+        } else {
             $periods = [
                 "1-1"  => "1ra Quincena de Enero",
                 "1-2"  => "2da Quincena de Enero",
@@ -136,18 +136,18 @@ class IncidentController extends Controller
             ];
 
             // If current year, only show fortnights up to current fortnight
-            if($year == Carbon::now()->year) {
+            if ($year == Carbon::now()->year) {
                 $currentMonth = Carbon::now()->month;
                 $currentDay = Carbon::now()->day;
                 $currentFortnight = $currentDay <= 15 ? 1 : 2;
 
                 $filteredPeriods = [];
-                foreach($periods as $key => $value) {
+                foreach ($periods as $key => $value) {
                     $parts = explode('-', $key);
                     $month = (int)$parts[0];
                     $fortnight = (int)$parts[1];
-                    
-                    if($month < $currentMonth || ($month == $currentMonth && $fortnight <= $currentFortnight)) {
+
+                    if ($month < $currentMonth || ($month == $currentMonth && $fortnight <= $currentFortnight)) {
                         $filteredPeriods[$key] = $value;
                     }
                 }
@@ -182,12 +182,12 @@ class IncidentController extends Controller
     function getIncidentsByEmployee(Request $request, string $employee_number)
     {
         $employee =  $this->findEmployee($employee_number);
-        if( $employee instanceof RedirectResponse ){
+        if ($employee instanceof RedirectResponse) {
             return $employee;
         }
 
         // * retrive the query params
-        if( $request->filled('year') && $request->filled('month') ){
+        if ($request->filled('year') && $request->filled('month')) {
             $options = [
                 'year' => $request->input('year'),
                 'month' => $request->input('month'),
@@ -195,19 +195,19 @@ class IncidentController extends Controller
         }
 
         // todo: calculate the breadcrumns based on where the request come from
-        $previous_path = parse_url( url()->previous(), PHP_URL_PATH);
-        if( $previous_path == '/incidents' ){
+        $previous_path = parse_url(url()->previous(), PHP_URL_PATH);
+        if ($previous_path == '/incidents') {
             $breadcrumbs = array(
-                ["name"=> "Inicio", "href"=> "/"],
-                ["name"=> "Incidencias", "href"=> url()->previous()],
-                ["name"=> "Incidencias del empleado", "href"=>""],
+                ["name" => "Inicio", "href" => "/"],
+                ["name" => "Incidencias", "href" => url()->previous()],
+                ["name" => "Incidencias del empleado", "href" => ""],
             );
-        }else{
+        } else {
             $breadcrumbs = array(
-                ["name"=> "Inicio", "href"=> "/"],
-                ["name"=> "Vista Empleados", "href"=> route('employees.index') ],
-                ["name"=> "Empleado: $employee->employeeNumber", "href"=> route('employees.show', $employee->employeeNumber)],
-                ["name"=> "Incidencias", "href"=>""],
+                ["name" => "Inicio", "href" => "/"],
+                ["name" => "Vista Empleados", "href" => route('employees.index')],
+                ["name" => "Empleado: $employee->employeeNumber", "href" => route('employees.show', $employee->employeeNumber)],
+                ["name" => "Incidencias", "href" => ""],
             );
         }
 
@@ -238,10 +238,10 @@ class IncidentController extends Controller
         // * get working hours
         $hours = array();
         $workingHours = WorkingHours::where("employee_id", $employee->id)->first();
-        if( $workingHours != null){
-            if( $workingHours->toeat == null){
+        if ($workingHours != null) {
+            if ($workingHours->toeat == null) {
                 array_push($hours, $workingHours->checkin . "-" . $workingHours->checkout);
-            }else {
+            } else {
                 array_push($hours, $workingHours->checkin . "-" . $workingHours->toeat);
                 array_push($hours, $workingHours->toarrive . "-" . $workingHours->checkout);
             }
@@ -253,7 +253,7 @@ class IncidentController extends Controller
         // Validate if photo employee exists $employee->photo in public folder
         $employeePhoto = '/images/unknown.png';
         // validate if photo exists in directory
-        if($employee->photo != null) {
+        if ($employee->photo != null) {
             $employeePhoto = public_path($employee->photo);
             if (file_exists($employeePhoto)) {
                 $employeePhoto = asset($employee->photo);
@@ -275,7 +275,7 @@ class IncidentController extends Controller
             "checa" => (object) $checa,
             "workingHours" => $hours,
             "incidentStatuses" => array_values($incidentStatuses),
-            "options" => isset($options) ?$options :null,
+            "options" => isset($options) ? $options : null,
             "employeePhoto" => $employeePhoto,
             "years" => $years
         ]);
@@ -287,7 +287,8 @@ class IncidentController extends Controller
      * @param  string $employee_number
      * @return void
      */
-    function employeeIncidentsJson(Request $request, string $employee_number): JsonResponse{
+    function employeeIncidentsJson(Request $request, string $employee_number): JsonResponse
+    {
 
         // * retrive the querys
         $year = $request->query('year');
@@ -302,23 +303,21 @@ class IncidentController extends Controller
             $data = $this->employeeIncidentService->getIncidents($employee_number, $startOfMonth, $endOfMonth);
 
             // * validate if the data need to be filtered
-            if( $request->query->has("onlyPendings") ){
-                $data = array_filter($data, fn($item)=> $item['incident_state_id'] == self::$INCIDENT_STATE_PENDING );
+            if ($request->query->has("onlyPendings")) {
+                $data = array_filter($data, fn($item) => $item['incident_state_id'] == self::$INCIDENT_STATE_PENDING);
             }
 
             return response()->json($data, 200);
-        }
-        catch (ModelNotFoundException $nf) {
-            Log::error("Employee not found at attempting to retrive the incidents of the employee '{employeeNmber}'",[
+        } catch (ModelNotFoundException $nf) {
+            Log::error("Employee not found at attempting to retrive the incidents of the employee '{employeeNmber}'", [
                 "employeeNmber" => $employee_number,
                 "message" => $nf->getMessage()
             ]);
             return response()->json([
                 "message" => "Employee not found"
             ], 404);
-        }
-        catch (\Throwable $th) {
-            Log::error("Fail at attempting to retrive the incidents of the employee '{employeeNmber}: {message}'",[
+        } catch (\Throwable $th) {
+            Log::error("Fail at attempting to retrive the incidents of the employee '{employeeNmber}: {message}'", [
                 "employeeNmber" => $employee_number,
                 "message" => $th->getMessage()
             ]);
@@ -336,7 +335,8 @@ class IncidentController extends Controller
      * @param  mixed $incident_id
      * @return void
      */
-    function updateIncidentState(Request $request, int $incident_id){
+    function updateIncidentState(Request $request, int $incident_id)
+    {
 
         // * validate the request
         $request->validate([
@@ -345,8 +345,8 @@ class IncidentController extends Controller
 
         // * retrive the incident id
         $incident = Incident::with('employee')->find($incident_id);
-        if( $incident == null){
-            Log::warning("Incident id '{incidentId}' not found when attempting to update the status at IncidentController.updateIncidentStatus", [ "incidentId" => $incident_id ]);
+        if ($incident == null) {
+            Log::warning("Incident id '{incidentId}' not found when attempting to update the status at IncidentController.updateIncidentStatus", ["incidentId" => $incident_id]);
             return redirect()->back()->withErrors([
                 "message" => "La incidencia no se encuentra en el sistema o no está disponible."
             ])->withInput();
@@ -368,8 +368,7 @@ class IncidentController extends Controller
                 "old_value" => $oldStateValue,
                 "new_value" => $request->input('state_id')
             ]);
-
-        }catch(\Throwable $th){
+        } catch (\Throwable $th) {
 
             Log::error("Fail to update the state of the incident id '{incident_id}' at IncidentController.updateIncidentStatus: {message}", [
                 "message" => $th->getMessage(),
@@ -379,12 +378,10 @@ class IncidentController extends Controller
             return redirect()->back()->withErrors([
                 "message" => "Error al actualizar el estado de la incidencia, intente de nuevo o comuníquese con el administrador."
             ])->withInput();
-
         }
 
         // TODO: Calculate where to redirect based on where the request is come from
         return redirect()->back()->with('success', 'Estado de la incidencia actualizada.');
-
     }
 
 
@@ -397,7 +394,7 @@ class IncidentController extends Controller
     function makeReport(Request $request)
     {
         // * validate the request data
-        $validator = Validator::make( $request->query(), [
+        $validator = Validator::make($request->query(), [
             'general_direction_id' => 'required|numeric',
             'year' => 'required|numeric|min:2020',
             'period' => 'required',
@@ -405,7 +402,7 @@ class IncidentController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return redirect()->back()->withErrors( $validator->errors()->messages() )->withInput();
+            return redirect()->back()->withErrors($validator->errors()->messages())->withInput();
         }
 
         // * prepare the inputs
@@ -427,26 +424,26 @@ class IncidentController extends Controller
 
         // * get employees with incidences
         $employees = array();
-        if( $__reportType == 'monthly'){
+        if ($__reportType == 'monthly') {
             $startDate = Carbon::parse("$__year-$__period-01")->startOfDay();
             $endDate = Carbon::parse("$__year-$__period-01")->endOfMonth()->endOfDay();
             $title = "Reporte de incidencias del mes de " . $this->monthName($__period - 1);
         }
-        if( $__reportType == 'fortnight'){
+        if ($__reportType == 'fortnight') {
             $month = explode("-", $__period)[0];
             $quin = explode("-", $__period)[1];
-            if( $quin == 1){
+            if ($quin == 1) {
                 $startDate = Carbon::parse("$__year-$month-01");
                 $endDate = Carbon::parse("$__year-$month-15");
-            }else{
+            } else {
                 $startDate = Carbon::parse("$__year-$month-16");
                 $endDate = Carbon::parse("$__year-$month-01")->endOfMonth()->endOfDay();
             }
 
-            $title = "Reporte de incidencias del " . $startDate->format('d M Y') . ' al ' . $endDate->format('d M Y') ;
+            $title = "Reporte de incidencias del " . $startDate->format('d M Y') . ' al ' . $endDate->format('d M Y');
         }
-        $employees = $this->getEmployeesWithIncidentsByDirection( $__generalDirection, $startDate, $endDate );
-        $employees = array_map(fn( $item) => (array) $item, $employees);
+        $employees = $this->getEmployeesWithIncidentsByDirection($__generalDirection, $startDate, $endDate);
+        $employees = array_map(fn($item) => (array) $item, $employees);
 
         // * get the incident of each employee for the report
         $totales = array(
@@ -490,19 +487,19 @@ class IncidentController extends Controller
         }
 
         // * make excel document
-        $date = ["start" => $startDate, "end" => $endDate ];
+        $date = ["start" => $startDate, "end" => $endDate];
         $incidentReport = new IncidentsReport($employees, $date, $generalDirection->name, $totales, $title);
         $documentContent = $incidentReport->create();
-        if( $documentContent === false){
+        if ($documentContent === false) {
             // TODO: Log fail
             throw new \Exception("Fail to make the report document");
         }
 
 
         // * save the file on a temporally file and downlaod them
-        $fileName = sprintf("%s.xlsx", (string) Str::uuid() );
+        $fileName = sprintf("%s.xlsx", (string) Str::uuid());
         $filePath = sprintf("tmp/incidentReports/$fileName");
-        if( Storage::disk('local')->put( $filePath, $documentContent ) ){
+        if (Storage::disk('local')->put($filePath, $documentContent)) {
             Log::notice("User {userName} generate a incident report of period {start} to {end}", [
                 "userName" => Auth::user()->name,
                 ...$date
@@ -511,14 +508,14 @@ class IncidentController extends Controller
 
         // * download the file
         return Storage::disk('local')->download($filePath, "reporte-incidencias.xlsx");
-
     }
 
-    function makeIncidentsOfEmployee(Request $request, string $employee_number ){
+    function makeIncidentsOfEmployee(Request $request, string $employee_number)
+    {
 
         // * validate the user level
         if (Auth::user()->level_id != 1) {
-            Log::warning('User '.Auth::user()->name . ' tried to create incidents.');
+            Log::warning('User ' . Auth::user()->name . ' tried to create incidents.');
             abort(404);
         }
 
@@ -529,7 +526,7 @@ class IncidentController extends Controller
         // * get employee
         try {
             $employee = $this->employeeService->getEmployee($employee_number);
-        }catch(ModelNotFoundException $ex){
+        } catch (ModelNotFoundException $ex) {
             //TODO: log exception
         }
 
@@ -539,12 +536,12 @@ class IncidentController extends Controller
 
         // * calculate if the date is midweek or weekend
         // *    Get the day of the week as a number (7 = Sunday, 6 = Saturday, 5 = Friday, ...)
-        $date = Carbon::parse( $request->input('date'));
+        $date = Carbon::parse($request->input('date'));
         $dayNumber = $date->format('N');
         $workDays = array('week');
-        $dayIs = ($dayNumber < 6) ?"week" :"weekend";
+        $dayIs = ($dayNumber < 6) ? "week" : "weekend";
 
-        if($workingDays) {
+        if ($workingDays) {
             if ($workingDays->weekend == 1) {
                 array_push($workDays, 'weekend');
             }
@@ -556,7 +553,7 @@ class IncidentController extends Controller
 
 
         // * calculate the incidents if the date target is on the employee schedule work
-        if(in_array($dayIs, $workDays)) {
+        if (in_array($dayIs, $workDays)) {
             try {
 
                 $incidentService = new IncidentService(
@@ -566,9 +563,8 @@ class IncidentController extends Controller
                 );
 
                 $incidentService->calculateAndStoreIncidentsV2();
-
             } catch (\Exception $e) {
-                Log::error('Error al crear la incidencias del empleado id: '.$employee->id . ' - ' . $e->getMessage() . ' - ' . $e->getTraceAsString() );
+                Log::error('Error al crear la incidencias del empleado id: ' . $employee->id . ' - ' . $e->getMessage() . ' - ' . $e->getTraceAsString());
 
                 // return redirect()
                 //     ->route('employee', ['employee_id' => $employee->id, 'general_direction_id' => $employee->general_direction_id])
@@ -578,16 +574,15 @@ class IncidentController extends Controller
                 ])->withInput();
             }
 
-            Log::notice('El usuario '.Auth::user()->name .' creó las incidencias para el empleado id: '. $employee->id.' del día ' .$date->format('Y-m-d'));
-
+            Log::notice('El usuario ' . Auth::user()->name . ' creó las incidencias para el empleado id: ' . $employee->id . ' del día ' . $date->format('Y-m-d'));
         }
-        
-        return redirect()->route('employees.show', $employee_number);
 
+        return redirect()->route('employees.show', $employee_number);
     }
 
 
-    function createIncidentsJob(Request $request){
+    function createIncidentsJob(Request $request)
+    {
 
         // * validate the date
         $request->validate([
@@ -605,7 +600,8 @@ class IncidentController extends Controller
      * @param  string $employee_number
      * @return \App\ViewModels\EmployeeViewModel|\Illuminate\Http\RedirectResponse
      */
-    private function findEmployee(string $employee_number){
+    private function findEmployee(string $employee_number)
+    {
 
         // * attempt to get the employee
         try {
@@ -630,14 +626,64 @@ class IncidentController extends Controller
      * @param  string|Date|Carbon $to
      * @return array<EmployeeViewModel>
      */
-    private function getEmployeesWithIncidentsByDirection(int $generalDirecctionId, $from, $to){
+    private function getEmployeesWithIncidentsByDirection(int $generalDirectionId, $from, $to)
+    {
+        // Empleados especiales para reglas de negocio
+        $employeesVLCPC = [
+            20902, // BRENDA LIZZETH SANCHEZ PICASSO
+            10829, // HOMERO GONZALEZ SANCHEZ
+            48461, // YARAHI JOSELIN SILVERIO DUQUE
+            7057,  // MA. IGNACIA RUIZ RETA
+            20882, // YESENIA COLUNGA BRISEÑO
+        ];
 
-        // * get the incidents
-        $incidents = Incident::whereBetween('date', [$from, $to])
-        ->whereHas("employee", function($employee) use($generalDirecctionId) {
-            return $employee->where('general_direction_id', $generalDirecctionId);
-        })->get();
+        $employeesProcesos = [
+            15492, // ROSAURA OTERO ZARATE
+            35561, // VALERIA MONSERRAT GALLEGOS MALDONADO
+            30874, // JUAN CARLOS GUTIERREZ REYNA
+            24493, // ROSA IRMA REYNA FLORES
+            26934, // IRASEMA SANCHEZ GANDARA
+            22515, // SANTANA MARQUEZ LOPEZ
+            28875, // MARIA DE LOURDES ARRATIA MALDONADO
+        ];
 
+        // Combinar todos los empleados especiales (para GD 17 que debe ver ambos grupos)
+        $allSpecialEmployees = array_merge($employeesVLCPC, $employeesProcesos);
+
+        // * get the incidents aplicando reglas especiales según la GD
+        $incidentsQuery = Incident::whereBetween('date', [$from, $to]);
+
+        // Aplicar reglas especiales según la GD seleccionada
+        if ($generalDirectionId == 18) {
+            // GD 18: Excluir empleados específicos
+            $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId, $allSpecialEmployees) {
+                $employee->where('general_direction_id', $generalDirectionId)
+                    ->whereNotIn('employee_number', $allSpecialEmployees);
+            });
+        } elseif ($generalDirectionId == 16) {
+            // GD 16: Incluir empleados de VLCPC (que están en GD 18)
+            $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId, $employeesVLCPC) {
+                $employee->where(function ($q) use ($generalDirectionId, $employeesVLCPC) {
+                    $q->where('general_direction_id', $generalDirectionId)
+                        ->orWhereIn('employee_number', $employeesVLCPC);
+                });
+            });
+        } elseif ($generalDirectionId == 17) {
+            // GD 17: Incluir TODOS los empleados especiales (VLCPC + Procesos)
+            $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId, $allSpecialEmployees) {
+                $employee->where(function ($q) use ($generalDirectionId, $allSpecialEmployees) {
+                    $q->where('general_direction_id', $generalDirectionId)
+                        ->orWhereIn('employee_number', $allSpecialEmployees);
+                });
+            });
+        } else {
+            // Resto de GDs: Comportamiento normal
+            $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId) {
+                $employee->where('general_direction_id', $generalDirectionId);
+            });
+        }
+
+        $incidents = $incidentsQuery->get();
 
         // * group by employee
         $groupedByEmployee = $incidents->groupBy('employee_id')->all();
@@ -649,21 +695,21 @@ class IncidentController extends Controller
         ])->whereIn('id', array_keys($groupedByEmployee));
 
         // * filter employees by the user-level
-        if( Auth::user()->level_id > 1) {
+        if (Auth::user()->level_id > 1) {
             $employeesOfUser = $this->employeeService->getEmployeesOfUser();
-            $employeesQuery->whereIn('id', $employeesOfUser->pluck('id')->all() );
+            $employeesQuery->whereIn('id', $employeesOfUser->pluck('id')->all());
         }
 
         // * get the employees and process them into the view model
         $employeesRaw = $employeesQuery->get()->all();
-        $employees = array_map(function($employeeData){
+        $employees = array_map(function ($employeeData) {
             return EmployeeViewModel::fromEmployeeModel($employeeData);
         }, $employeesRaw);
 
         // * append the total of incidences on the period
-        foreach($employees as &$empl){
+        foreach ($employees as &$empl) {
             try {
-                $empl->totalIncidents = count( $groupedByEmployee[$empl->id] );
+                $empl->totalIncidents = count($groupedByEmployee[$empl->id]);
             } catch (\Throwable $th) {
                 $empl->totalIncidents = 0;
             }
@@ -680,7 +726,8 @@ class IncidentController extends Controller
      * @param  Date|string $to
      * @return array [ 'id', 'delays', 'absents', 'acumulations', 'totalAbsents' ]
      */
-    private function getIncidentsOfEmployeeGrupedByType($employee_id, $from, $to){
+    private function getIncidentsOfEmployeeGrupedByType($employee_id, $from, $to)
+    {
 
         // * get incidents by type
         $delays = Incident::where('employee_id', $employee_id)
@@ -713,7 +760,8 @@ class IncidentController extends Controller
         return $response;
     }
 
-    private function monthName($i){
+    private function monthName($i)
+    {
         $months = array('Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre');
         return $months[$i];
     }
