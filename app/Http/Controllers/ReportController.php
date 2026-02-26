@@ -396,32 +396,43 @@ class ReportController extends Controller
             ->where('status_id', 1)
             ->where('active', 1);
 
+        //GENERAL DIRECTION VLCPC ID = 16
         // * Special business rules for specific General Directions
-        $specialEmployeeNumbers = [
-            20902,
-            10829,
-            48461,
-            7057,
-            20882,
-            24493,
-            28875,
-            22515,
-            30874,
-            15492,
-            26934,
-            35561
+        $employeesVLCPC = [
+            20902, // BRENDA LIZZETH SANCHEZ PICASSO
+            10829, // HOMERO GONZALEZ SANCHEZ
+            48461, // YARAHI JOSELIN SILVERIO DUQUE
+            7057, // MA. IGNACIA RUIZ RETA
+            20882, // YESENIA COLUNGA BRISEÑO
+        ];
+
+        // GENERAL DIRECTION PROCESOS ID = 17
+        $employeesProcesos = [
+            15492, // ROSAURA OTERO ZARATE
+            35561, // VALERIA MONSERRAT GALLEGOS MALDONADO
+            30874, // JUAN CARLOS GUTIERREZ REYNA
+            24493, // ROSA IRMA REYNA FLORES
+            26934, // IRASEMA SANCHEZ GANDARA
+            22515, // SANTANA MARQUEZ LOPEZ
+            28875, // MARIA DE LOURDES ARRATIA MALDONADO
         ];
 
         // GD = 18: Excluir empleados específicos
         if ($generalDirectionId == 18) {
             $employeesQuery->where('general_direction_id', 18)
-                ->whereNotIn('employee_number', $specialEmployeeNumbers);
+                ->whereNotIn('employee_number', $employeesVLCPC)
+                ->whereNotIn('employee_number', $employeesProcesos);
         }
         // GD = 28: Incluir empleados específicos (que normalmente estarían en GD 18)
-        elseif ($generalDirectionId == 28) {
-            $employeesQuery->where(function ($query) use ($specialEmployeeNumbers) {
-                $query->where('general_direction_id', 28)
-                    ->orWhereIn('employee_number', $specialEmployeeNumbers);
+        elseif ($generalDirectionId == 16) {
+            $employeesQuery->where(function ($query) use ($employeesVLCPC) {
+                $query->where('general_direction_id', 16)
+                    ->orWhereIn('employee_number', $employeesVLCPC);
+            });
+        } elseif ($generalDirectionId == 17) {
+            $employeesQuery->where(function ($query) use ($employeesProcesos) {
+                $query->where('general_direction_id', 17)
+                    ->orWhereIn('employee_number', $employeesProcesos);
             });
         }
         // Resto de GDs: Comportamiento normal
