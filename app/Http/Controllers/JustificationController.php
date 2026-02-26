@@ -29,7 +29,8 @@ class JustificationController extends Controller
     protected EmployeeService $employeeService;
     protected JustificationService $justificationService;
 
-    function __construct( EmployeeService $employeeService, JustificationService $justificationService ) {
+    function __construct(EmployeeService $employeeService, JustificationService $justificationService)
+    {
         $this->employeeService = $employeeService;
         $this->justificationService = $justificationService;
     }
@@ -39,29 +40,80 @@ class JustificationController extends Controller
     {
         $elementsToTake = 25;
         $page = $request->query("p", 1);
-        $justifications = array();
+        $justifications = [];
         $data = [];
 
-        // * filter the employees by the user level
         $__authUser = Auth::user();
-        $__currentLevel = intval(Auth::user()->level_id);
+        $__currentLevel = intval($__authUser->level_id);
 
-        if ($__currentLevel > 0 ) {
+        // 🔹 Empleados especiales (misma regla que en getEmployees)
+        $specialEmployeeNumbers = [
+            20902,
+            10829,
+            48461,
+            7057,
+            20882,
+            24493,
+            28875,
+            22515,
+            30874,
+            15492,
+            26934,
+            35561
+        ];
+
+        if ($__currentLevel > 0) {
+
             $data = Justify::with(['type', 'employee'])
-                ->when($__currentLevel > 1, function($query) use($__currentLevel, $__authUser) {
-                    return $query->whereHas('employee', function($emp) use($__currentLevel, $__authUser) {
-                        if ($__currentLevel >= 2)
-                        {
-                            $emp->where('general_direction_id', $__authUser->general_direction_id );
+                ->when($__currentLevel > 1, function ($query) use ($__currentLevel, $__authUser, $specialEmployeeNumbers) {
+
+                    return $query->whereHas('employee', function ($emp) use ($__currentLevel, $__authUser, $specialEmployeeNumbers) {
+
+                        /*
+                     |--------------------------------------------------------------------------
+                     | NIVEL 2+ → General Direction
+                     |--------------------------------------------------------------------------
+                     */
+                        if ($__currentLevel >= 2) {
+
+                            $gd = $__authUser->general_direction_id;
+
+                            // GD 18 → excluir especiales
+                            if ($gd == 18) {
+                                $emp->where('general_direction_id', 18)
+                                    ->whereNotIn('employee_number', $specialEmployeeNumbers);
+                            }
+                            // GD 28 → incluir especiales
+                            elseif ($gd == 28) {
+                                $emp->where(function ($q) use ($specialEmployeeNumbers) {
+                                    $q->where('general_direction_id', 28)
+                                        ->orWhereIn('employee_number', $specialEmployeeNumbers);
+                                });
+                            }
+                            // Resto de GD
+                            else {
+                                $emp->where('general_direction_id', $gd);
+                            }
                         }
-                        if($__currentLevel >= 3)
-                        {
+
+                        /*
+                     |--------------------------------------------------------------------------
+                     | NIVEL 3+ → Dirección
+                     |--------------------------------------------------------------------------
+                     */
+                        if ($__currentLevel >= 3) {
                             $emp->where('direction_id', $__authUser->direction_id);
                         }
-                        if($__currentLevel >= 4)
-                        {
+
+                        /*
+                     |--------------------------------------------------------------------------
+                     | NIVEL 4+ → Subdirección
+                     |--------------------------------------------------------------------------
+                     */
+                        if ($__currentLevel >= 4) {
                             $emp->where('subdirectorate_id', $__authUser->subdirectorates_id);
                         }
+
                         return $emp;
                     });
                 })
@@ -72,9 +124,8 @@ class JustificationController extends Controller
                 ->all();
         }
 
-        foreach($data as $element)
-        {
-            array_push( $justifications, [
+        foreach ($data as $element) {
+            $justifications[] = [
                 "id" => $element->id,
                 "employee_name" => $element->employee?->name,
                 "type_name" => $element->type->name,
@@ -82,10 +133,9 @@ class JustificationController extends Controller
                 "date_finish" => $element->date_finish,
                 "date_register" => $element->created_at,
                 "details" => $element->details
-            ]);
+            ];
         }
 
-        // * return the viewe
         return Inertia::render('Justifications/Index', [
             "justifications" => array_values($justifications),
             "paginator" => [
@@ -96,20 +146,20 @@ class JustificationController extends Controller
             ]
         ]);
     }
-
     /**
      * returned view to edit the justify
      *
      * @param  int $justification_id
      * @return void
      */
-    function editJustify(Request $request, int $justification_id){
+    function editJustify(Request $request, int $justification_id)
+    {
 
         // * retrive the previous route
         $parsedUrl = parse_url(url()->previous());
 
         // * Check if query parameters exist and extract them
-        $queryParams = Array();
+        $queryParams = array();
         if (isset($parsedUrl['query'])) {
             parse_str($parsedUrl['query'], $queryParams);
 
@@ -118,15 +168,15 @@ class JustificationController extends Controller
         }
 
         // * retrive the justify
-        $justify = Justify::with(['type','employee'])->find($justification_id);
-        if($justify == null){
+        $justify = Justify::with(['type', 'employee'])->find($justification_id);
+        if ($justify == null) {
             //TODO: Redirecto to not found page
             throw new \Exception("Element not found");
         }
 
         // * get the employee
         $employee =  $this->findEmployee($justify->employee->employeeNumber());
-        if( $employee instanceof RedirectResponse ){
+        if ($employee instanceof RedirectResponse) {
             return $employee;
         }
 
@@ -134,12 +184,12 @@ class JustificationController extends Controller
         $justificationsType = TypeJustify::select('id', 'name')->get()->toArray();
 
         // TODO: calculate the breadcrumns based on where the request come from
-        $breadcrumbs = array (
-            ["name"=> "Inicio", "href"=> "/dashboard"],
-            ["name"=> "Vista Empleados", "href"=> route('employees.index') ],
-            ["name"=> "Empleado: $employee->employeeNumber", "href"=> route('employees.show', $employee->employeeNumber)],
-            ["name"=> "Justificantes", "href"=> route('employees.justifications.index', [ "employee_number" => $employee->employeeNumber, ...$queryParams ])],
-            ["name"=> "Editar justificante", "href"=>""],
+        $breadcrumbs = array(
+            ["name" => "Inicio", "href" => "/dashboard"],
+            ["name" => "Vista Empleados", "href" => route('employees.index')],
+            ["name" => "Empleado: $employee->employeeNumber", "href" => route('employees.show', $employee->employeeNumber)],
+            ["name" => "Justificantes", "href" => route('employees.justifications.index', ["employee_number" => $employee->employeeNumber, ...$queryParams])],
+            ["name" => "Editar justificante", "href" => ""],
         );
 
         // * return the view
@@ -150,21 +200,21 @@ class JustificationController extends Controller
             "justify" => $justify,
             "breadcrumbs" => $breadcrumbs
         ]);
-
     }
 
-    function updateJustify(UpdateJustificationRequest $request, $justification_id){
+    function updateJustify(UpdateJustificationRequest $request, $justification_id)
+    {
 
         // * retrive the justify model
-        $justify = Justify::with(['type','employee'])->find($justification_id);
-        if($justify == null){
+        $justify = Justify::with(['type', 'employee'])->find($justification_id);
+        if ($justify == null) {
             //TODO: Redirecto to not found page
             throw new \Exception("Element not found");
         }
 
         // * get the employee
         $employee =  $this->findEmployee($justify->employee->employeeNumber());
-        if( $employee instanceof RedirectResponse ){
+        if ($employee instanceof RedirectResponse) {
             return $employee;
         }
 
@@ -176,7 +226,6 @@ class JustificationController extends Controller
                 request: $request,
                 employee: $employee
             );
-
         } catch (\Throwable $th) {
             Log::error("Fail to update the justify the day: {message}", [
                 "message" => $th->getMessage()
@@ -189,7 +238,7 @@ class JustificationController extends Controller
 
         // * retrive and clear queryParams of the session
         $queryParams = session('queryParams', []);
-        if( !empty($queryParams)){
+        if (!empty($queryParams)) {
             session()->forget('queryParams');
         }
 
@@ -198,7 +247,6 @@ class JustificationController extends Controller
             "employee_number" => $employee->employeeNumber,
             ...$queryParams
         ]);
-
     }
 
     /**
@@ -207,18 +255,19 @@ class JustificationController extends Controller
      * @param  int $justification_id
      * @return mixed
      */
-    function destroy(int $justification_id){
+    function destroy(int $justification_id)
+    {
 
         // * retrive the justify model
-        $justify = Justify::with(['type','employee'])->find($justification_id);
-        if($justify == null){
-            return response()->json([ "message" => "Justification not found on the system." ], 404);
+        $justify = Justify::with(['type', 'employee'])->find($justification_id);
+        if ($justify == null) {
+            return response()->json(["message" => "Justification not found on the system."], 404);
         }
 
         // * get the employee
         $employee =  $this->findEmployee($justify->employee->employeeNumber());
-        if( $employee instanceof RedirectResponse ){
-            return response()->json([ "message" => "Employee not found on the system." ], 404);
+        if ($employee instanceof RedirectResponse) {
+            return response()->json(["message" => "Employee not found on the system."], 404);
         }
 
         // * attempt to delete the justify
@@ -229,13 +278,12 @@ class JustificationController extends Controller
                 "message" => $th->getMessage()
             ]);
 
-            return response()->json([ "message" => "Error al eliminar el justificante, intente de nuevo o comuníquese con el administrador." ], 500);
+            return response()->json(["message" => "Error al eliminar el justificante, intente de nuevo o comuníquese con el administrador."], 500);
         }
 
         return redirect()->route('employees.justifications.index', [
             "employee_number" => $employee->employeeNumber,
         ])->with('success', 'Justificante eliminado correctamente.');
-
     }
 
     /**
@@ -244,11 +292,12 @@ class JustificationController extends Controller
      * @param  string $employee_number
      * @return mixed
      */
-    function showJustificationOfEmployee( Request $request, string $employee_number) {
-        
+    function showJustificationOfEmployee(Request $request, string $employee_number)
+    {
+
         // * get the employee
         $employee =  $this->findEmployee($employee_number);
-        if( $employee instanceof RedirectResponse ){
+        if ($employee instanceof RedirectResponse) {
             return $employee;
         }
 
@@ -256,27 +305,28 @@ class JustificationController extends Controller
         $start = Carbon::now();
         $end = Carbon::now();
 
-        if($request->query("y") && $request->query("m")){
+        if ($request->query("y") && $request->query("m")) {
             $start = Carbon::createFromDate($request->query("y"), $request->query("m"), 1)->startOfMonth();
             $end = Carbon::createFromDate($request->query("y"), $request->query("m"), 1)->endOfMonth();
         }
 
-        if($request->query("from") && $request->query("to")){
+        if ($request->query("from") && $request->query("to")) {
             $start = Carbon::parse($request->query("from"));
             $end = Carbon::parse($request->query("to"));
         }
 
         $justifications = $this->justificationService->getJustificationsEmployee(
             $employee,
-            $start->format("Y-m-d"), $end->format("Y-m-d")
+            $start->format("Y-m-d"),
+            $end->format("Y-m-d")
         )->toArray();
 
         // TODO: calculate the breadcrumns based on where the request come from
         $breadcrumbs = array(
-            ["name"=> "Inicio", "href"=> "/dashboard"],
-            ["name"=> "Vista Empleados", "href"=> route('employees.index') ],
-            ["name"=> "Empleado: $employee->employeeNumber", "href"=> route('employees.show', $employee->employeeNumber)],
-            ["name"=> "Justificantes", "href"=>""],
+            ["name" => "Inicio", "href" => "/dashboard"],
+            ["name" => "Vista Empleados", "href" => route('employees.index')],
+            ["name" => "Empleado: $employee->employeeNumber", "href" => route('employees.show', $employee->employeeNumber)],
+            ["name" => "Justificantes", "href" => ""],
         );
 
         // * return the view
@@ -285,11 +335,10 @@ class JustificationController extends Controller
             "employee" => $employee,
             "justifications" => array_values($justifications),
             "breadcrumbs" => $breadcrumbs,
-            "dateRange" => sprintf( "Del %s al %s", $start->format("d M y"), $end->format("d M y") ),
+            "dateRange" => sprintf("Del %s al %s", $start->format("d M y"), $end->format("d M y")),
             "from" => $start->format("Y-m-d"),
             "to" => $end->format("Y-m-d"),
         ]);
-
     }
 
 
@@ -300,16 +349,17 @@ class JustificationController extends Controller
      * @param  string $employee_number
      * @return mixed
      */
-    function showJustifyDay( Request $request, string $employee_number) {
+    function showJustifyDay(Request $request, string $employee_number)
+    {
 
         // * get the employee
         $employee =  $this->findEmployee($employee_number);
-        if( $employee instanceof RedirectResponse ){
+        if ($employee instanceof RedirectResponse) {
             return $employee;
         }
 
         $initialDay = Carbon::today();
-        if( $request->query('day') != null){
+        if ($request->query('day') != null) {
             $initialDay = Carbon::parse($request->query('day'));
         }
 
@@ -317,11 +367,11 @@ class JustificationController extends Controller
         $justificationsType = TypeJustify::select('id', 'name')->get()->toArray();
 
         // TODO: calculate the breadcrumns based on where the request come from
-        $breadcrumbs = array (
-            ["name"=> "Inicio", "href"=> "/dashboard"],
-            ["name"=> "Vista Empleados", "href"=> route('employees.index') ],
-            ["name"=> "Empleado: $employee->employeeNumber", "href"=> route('employees.show', $employee->employeeNumber)],
-            ["name"=> "Justificar dia", "href"=>""],
+        $breadcrumbs = array(
+            ["name" => "Inicio", "href" => "/dashboard"],
+            ["name" => "Vista Empleados", "href" => route('employees.index')],
+            ["name" => "Empleado: $employee->employeeNumber", "href" => route('employees.show', $employee->employeeNumber)],
+            ["name" => "Justificar dia", "href" => ""],
         );
 
         // * return the view
@@ -332,7 +382,6 @@ class JustificationController extends Controller
             "initialDay" => $initialDay->format('Y-m-d'),
             "breadcrumbs" => $breadcrumbs
         ]);
-
     }
 
     /**
@@ -340,11 +389,12 @@ class JustificationController extends Controller
      *
      * @return mixed
      */
-    function storeJustification(NewJustificationRequest $request, string $employee_number) {
+    function storeJustification(NewJustificationRequest $request, string $employee_number)
+    {
 
         // * get the employee
         $employee =  $this->findEmployee($employee_number);
-        if( $employee instanceof RedirectResponse ){
+        if ($employee instanceof RedirectResponse) {
             return $employee;
         }
 
@@ -355,7 +405,6 @@ class JustificationController extends Controller
                 request: $request,
                 employee: $employee
             );
-
         } catch (\Throwable $th) {
             Log::error("Fail to justify the day: {message}", [
                 "message" => $th->getMessage()
@@ -367,8 +416,7 @@ class JustificationController extends Controller
         }
 
         // * redirect to employee show
-        return redirect()->route('employees.show', $employee->employeeNumber );
-
+        return redirect()->route('employees.show', $employee->employeeNumber);
     }
 
     /**
@@ -377,12 +425,13 @@ class JustificationController extends Controller
      * @param  int $justification_id
      * @return void
      */
-    function getJustificationFile(int $justification_id){
+    function getJustificationFile(int $justification_id)
+    {
 
         // * get the justify model
         $justify = Justify::find($justification_id);
-        if( $justify == null){
-            return response()->json([ "message" => "Justification not found on the system." ], 404);
+        if ($justify == null) {
+            return response()->json(["message" => "Justification not found on the system."], 404);
         }
 
         // * get the document
@@ -392,11 +441,10 @@ class JustificationController extends Controller
 
             return response($fileContents, 200)
                 ->header('Content-Type', 'application/pdf')
-                ->header('Content-Disposition', 'inline; filename="'.$fileName.'"');
+                ->header('Content-Disposition', 'inline; filename="' . $fileName . '"');
         } else {
             return response()->json(['message' => 'File not found'], 404);
         }
-
     }
 
     #region private methods
@@ -406,7 +454,8 @@ class JustificationController extends Controller
      * @param  string $employee_number
      * @return \App\ViewModels\EmployeeViewModel|\Illuminate\Http\RedirectResponse
      */
-    private function findEmployee(string $employee_number){
+    private function findEmployee(string $employee_number)
+    {
 
         // * attempt to get the employee
         try {
@@ -426,5 +475,5 @@ class JustificationController extends Controller
     }
     #endregion
 
-    
+
 }

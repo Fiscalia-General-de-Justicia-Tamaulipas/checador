@@ -15,128 +15,168 @@ use App\Models\{
 };
 use App\ViewModels\EmployeeViewModel;
 
-class EmployeeService {
-    
-    
+class EmployeeService
+{
     /**
-     * get the employees
-     *
-     * @param  int $take elemento to return, if its 0 return all
-     * @param  int $skip record to skip when take
-     * @param  array<string,mixed> $filters filter to apply ['general_direction_id', 'subdirectorate_id', 'direction_id', 'active']
-     * @param  int $total out of total
-     * @return Array<EmployeeViewModel>
+     * Aplica la regla especial de Dirección General (18 / 28)
+     */
+    private function applyGeneralDirectionRules($query, int $gd)
+    {
+        $specialEmployeeNumbers = [
+            20902,
+            10829,
+            48461,
+            7057,
+            20882,
+            24493,
+            28875,
+            22515,
+            30874,
+            15492,
+            26934,
+            35561
+        ];
+
+        if ($gd == 18) {
+            $query->where('general_direction_id', 18)
+                ->whereNotIn('employee_number', $specialEmployeeNumbers);
+        } elseif ($gd == 28) {
+            $query->where(function ($q) use ($specialEmployeeNumbers) {
+                $q->where('general_direction_id', 28)
+                    ->orWhereIn('employee_number', $specialEmployeeNumbers);
+            });
+        } else {
+            $query->where('general_direction_id', $gd);
+        }
+
+        return $query;
+    }
+
+
+    /**
+     * Obtener empleados con filtros y paginación
      */
     public function getEmployees(int $take = 0, int $skip = 0, array $filters = [], &$total)
     {
-        $employees = array();
+        $employees = [];
         $query = Employee::query();
 
-        // * filter the employees by the user level
-        if( Auth::user()->level_id == 1) { /* Admin */
-            // * apply some filters
-            if( !empty($filters) ){
-                if(isset($filters['general_direction_id']) && $filters['general_direction_id'] > 0 ){
-                    $query->where('general_direction_id', $filters['general_direction_id'] );
-                }
+        $authUser = Auth::user();
+        $currentLevel = $authUser->level_id;
 
-                if(isset($filters['subdirectorate_id']) && $filters['subdirectorate_id'] > 0 ){
-                    $query->where('subdirectorate_id', $filters['subdirectorate_id'] );
-                }
+        /*
+    |--------------------------------------------------------------------------
+    | FILTRO POR NIVEL
+    |--------------------------------------------------------------------------
+    */
 
-                if(isset($filters['direction_id']) && $filters['direction_id'] > 0 ){
-                    $query->where('direction_id', $filters['direction_id'] );
-                }
+        if ($currentLevel == 1) {
+            // ADMIN → puede filtrar libremente
 
-                if( isset($filters['search']) && !empty(trim($filters['search']))){
-                    $query = Employee::query();
-                    $query = $this->applyAdvancedSearch($query, $filters['search']);
-                }
-
-                if( isset($filters['active'])){
-                    $query->where('active', $filters['active']);
-                }
+            if (!empty($filters['general_direction_id'])) {
+                $query = $this->applyGeneralDirectionRules(
+                    $query,
+                    (int)$filters['general_direction_id']
+                );
             }
-        }else{
-            $__authUser = Auth::user();
-            $__currentLevel = Auth::user()->level_id;
+        } else {
 
-            if($__currentLevel > 2){
-                $query->where('general_direction_id', $__authUser->general_direction_id );
-            }else{
-                if(isset($filters['general_direction_id'])){
-                    $query->where('general_direction_id', $filters['general_direction_id'] );
-                }
+            // NO ADMIN → restricciones por jerarquía
+
+            if ($currentLevel > 2) {
+                $query = $this->applyGeneralDirectionRules(
+                    $query,
+                    (int)$authUser->general_direction_id
+                );
+            } elseif (!empty($filters['general_direction_id'])) {
+                $query = $this->applyGeneralDirectionRules(
+                    $query,
+                    (int)$filters['general_direction_id']
+                );
             }
 
-            if($__currentLevel > 3){
-                $query->where('direction_id', $__authUser->direction_id);
-            }else{
-                if(isset($filters['direction_id'])){
-                    $query->where('direction_id', $filters['direction_id'] );
-                }
+            if ($currentLevel > 3) {
+                $query->where('direction_id', $authUser->direction_id);
+            } elseif (!empty($filters['direction_id'])) {
+                $query->where('direction_id', $filters['direction_id']);
             }
 
-            if($__currentLevel > 4){
-                $query->where('subdirectorate_id', $__authUser->subdirectorates_id);
-            }else {
-                if(isset($filters['subdirectorate_id'])){
-                    $query->where('subdirectorate_id', $filters['subdirectorate_id'] );
-                }
-            }
-
-            if( isset($filters['search']) && !empty(trim($filters['search']))){
-                $query = $this->applyAdvancedSearch($query, $filters['search']);
-            }
-
-            if( isset($filters['active'])){
-                $query->where('active', $filters['active']);
+            if ($currentLevel > 4) {
+                $query->where('subdirectorate_id', $authUser->subdirectorates_id);
+            } elseif (!empty($filters['subdirectorate_id'])) {
+                $query->where('subdirectorate_id', $filters['subdirectorate_id']);
             }
         }
 
-        // * set the total people
+        /*
+    |--------------------------------------------------------------------------
+    | FILTROS GENERALES
+    |--------------------------------------------------------------------------
+    */
+
+        if (!empty($filters['search'])) {
+            $query = $this->applyAdvancedSearch($query, trim($filters['search']));
+        }
+
+        if (isset($filters['active'])) {
+            $query->where('active', $filters['active']);
+        }
+
+        /*
+    |--------------------------------------------------------------------------
+    | TOTAL
+    |--------------------------------------------------------------------------
+    */
+
         $total = $query->count();
 
-        // * get the local employees
-        if($take > 0){
-            $query->orderBy('name', 'ASC')->skip($skip)->take($take);
+        /*
+    |--------------------------------------------------------------------------
+    | PAGINACIÓN
+    |--------------------------------------------------------------------------
+    */
+
+        if ($take > 0) {
+            $query->orderBy('name', 'ASC')
+                ->skip($skip)
+                ->take($take);
         }
 
         $employeesRaw = $query->get();
 
-        /**
-         * @var Employee $employeeData
-         */
         foreach ($employeesRaw as $employeeData) {
-            array_push($employees, EmployeeViewModel::fromEmployeeModel($employeeData));
+            $employees[] = EmployeeViewModel::fromEmployeeModel($employeeData);
         }
 
         return $employees;
     }
 
+
     /**
-     * get the list of employees assigned to the current user
-     *
-     * @return Collection<Employee>
+     * Obtener empleados asignados al usuario autenticado
      */
-    public function getEmployeesOfUser(){
+    public function getEmployeesOfUser()
+    {
         $query = Employee::query();
 
-        // * filter the employees by the user level
-        if( Auth::user()->level_id > 1) {
-            $__authUser = Auth::user();
-            $__currentLevel = Auth::user()->level_id;
+        $authUser = Auth::user();
+        $currentLevel = $authUser->level_id;
 
-            if($__currentLevel >= 2){
-                $query->where('general_direction_id', $__authUser->general_direction_id );
+        if ($currentLevel > 1) {
+
+            if ($currentLevel >= 2) {
+                $query = $this->applyGeneralDirectionRules(
+                    $query,
+                    (int)$authUser->general_direction_id
+                );
             }
 
-            if($__currentLevel >= 3){
-                $query->where('direction_id', $__authUser->direction_id);
+            if ($currentLevel >= 3) {
+                $query->where('direction_id', $authUser->direction_id);
             }
 
-            if($__currentLevel >= 4){
-                $query->where('subdirectorate_id', $__authUser->subdirectorates_id);
+            if ($currentLevel >= 4) {
+                $query->where('subdirectorate_id', $authUser->subdirectorates_id);
             }
         }
 
@@ -156,22 +196,18 @@ class EmployeeService {
     {
         // * get the employee
         $employee = Employee::where('plantilla_id', '1' . $employeeNumber)->first();
-        if( $employee == null)
-        {
+        if ($employee == null) {
             throw new ModelNotFoundException("Employee not fount");
         }
 
         // * validate if the user has access the employee
         $__hasAccess = true;
-        try
-        {
-            if(Auth::user()->level_id > 1) // * validate the access only if is not a Admin user (level id 1)
+        try {
+            if (Auth::user()->level_id > 1) // * validate the access only if is not a Admin user (level id 1)
             {
                 $__hasAccess = \App\Helpers\ValidateAccessEmployee::validateUser(Auth::user(), $employee);
             }
-        }
-        catch (\Throwable $th)
-        {
+        } catch (\Throwable $th) {
             Log::error("Fail at validate if the user with id '{userId}' has access to the employee with employee number '{employee}: {message}'", [
                 "userId" => Auth::user()->id,
                 "employee" => $employeeNumber,
@@ -180,8 +216,7 @@ class EmployeeService {
             throw $th;
         }
 
-        if(!$__hasAccess)
-        {
+        if (!$__hasAccess) {
             throw new UnauthorizedException("The user has nos access to this employee.");
         }
 
@@ -199,11 +234,11 @@ class EmployeeService {
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      * @throws \Throwable
      */
-    public function updateEmployee(string $employeeNumber, array $data )
+    public function updateEmployee(string $employeeNumber, array $data)
     {
         // * get the employee
         $employee = Employee::where('plantilla_id', '1' . $employeeNumber)->first();
-        if( $employee == null){
+        if ($employee == null) {
             throw new ModelNotFoundException("Employee not fount");
         }
 
@@ -217,22 +252,21 @@ class EmployeeService {
 
             $employee->department_id = isset($data['department_id']) ? $data['department_id'] : 1;
 
-            if( isset($data['name'])){
+            if (isset($data['name'])) {
                 $employee->name = $data['name'];
             }
 
-            if( isset($data['canCheck'])){
+            if (isset($data['canCheck'])) {
                 $employee->status_id = $data['canCheck'];
             }
 
-            if( isset($data['status_id'])){
+            if (isset($data['status_id'])) {
                 $employee->active = $data['status_id'];
             }
 
             $employee->save();
 
             Log::notice("Employee '$employeeNumber:$employee->name' was updated.");
-
         } catch (\Throwable $th) {
             Log::error("Fail to update the employee '{employeeNumber}': {message}", [
                 "employeeNumber" => $employeeNumber,
@@ -241,7 +275,6 @@ class EmployeeService {
             ]);
             throw $th;
         }
-
     }
 
     /**
@@ -253,22 +286,20 @@ class EmployeeService {
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      * @throws \Throwable
      */
-    public function updateEmployeeStatus(string $employeeNumber, int $newStatusId )
+    public function updateEmployeeStatus(string $employeeNumber, int $newStatusId)
     {
         // * get the employee
         $employee = Employee::where('plantilla_id', '1' . $employeeNumber)->first();
-        if( $employee == null){
+        if ($employee == null) {
             throw new ModelNotFoundException("Employee not fount");
         }
 
         // * attempt to update the employee
-        try
-        {
+        try {
             $employee->active = $newStatusId;
             $employee->save();
 
             Log::notice("Updated Employee status of the employee'$employeeNumber:$employee->name'.");
-
         } catch (\Throwable $th) {
             Log::error("Fail to update the employee '{employeeNumber}': {message}", [
                 "employeeNumber" => $employeeNumber,
@@ -283,7 +314,8 @@ class EmployeeService {
      *
      * @return array<EmployeeViewModel>
      */
-    public function getNewEmployees() {
+    public function getNewEmployees()
+    {
         $employeesRaw = Employee::where('general_direction_id', 1)
             ->orWhere('general_direction_id', null)
             ->orWhere('general_direction_id', '')
@@ -319,10 +351,11 @@ class EmployeeService {
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException employee not found
      * @throws \Exception fail to updat the schedule
      */
-    public function updateEmployeeSchedule(string $employeeNumber, $scheduleRequest ){
+    public function updateEmployeeSchedule(string $employeeNumber, $scheduleRequest)
+    {
         // * get the employee
         $employee = Employee::where('plantilla_id', '1' . $employeeNumber)->first();
-        if( $employee == null){
+        if ($employee == null) {
             throw new ModelNotFoundException("Employee not fount");
         }
 
@@ -334,13 +367,13 @@ class EmployeeService {
             WorkingHours::where('employee_id', $employee->id)->delete();
 
             // * store new working hours
-            if( $scheduleRequest['scheduleType'] == 1) /* Horario corrido */{
+            if ($scheduleRequest['scheduleType'] == 1) /* Horario corrido */ {
                 WorkingHours::create([
                     'employee_id' => $employee->id,
                     'checkin' => $scheduleRequest['checkin'],
                     'checkout' => $scheduleRequest['toeat'],
                 ]);
-            }else /* Horario quebrado */ {
+            } else /* Horario quebrado */ {
                 WorkingHours::create([
                     'employee_id' => $employee->id,
                     'checkin' => $scheduleRequest['checkin'],
@@ -362,18 +395,17 @@ class EmployeeService {
         // * attempt tp update the working days
         try {
             $workingDays = WorkingDays::where('employee_id', $employee->id)->first();
-            if( $workingDays == null){
+            if ($workingDays == null) {
                 WorkingDays::create([
                     'employee_id' => $employee->id,
                     'week' => $scheduleRequest['midweek'],
                     'weekend' => $scheduleRequest['weekend'],
                 ]);
-            }else{
+            } else {
                 $workingDays->week = $scheduleRequest['midweek'];
                 $workingDays->weekend = $scheduleRequest['weekend'];
                 $workingDays->save();
             }
-
         } catch (\Throwable $th) {
             DB::rollback();
             Log::error("Fail to update the employee working days: {message}", [
@@ -399,46 +431,45 @@ class EmployeeService {
     private function applyAdvancedSearch($query, string $searchTerm)
     {
         $searchTerm = trim($searchTerm);
-        
+
         if (empty($searchTerm)) {
             return $query;
         }
 
-        return $query->where(function($q) use ($searchTerm) {
+        return $query->where(function ($q) use ($searchTerm) {
             // Search by employee number (plantilla_id)
-            $q->where('plantilla_id', 'like', "%".$searchTerm."%");
+            $q->where('plantilla_id', 'like', "%" . $searchTerm . "%");
 
             // Search by employee number without prefix (if numeric)
             if (is_numeric($searchTerm)) {
-                $q->orWhere('plantilla_id', 'like', "%1".$searchTerm."%");
+                $q->orWhere('plantilla_id', 'like', "%1" . $searchTerm . "%");
             }
 
             // Advanced name search - split search terms for better matching
-            $searchWords = array_filter(explode(' ', $searchTerm), function($word) {
+            $searchWords = array_filter(explode(' ', $searchTerm), function ($word) {
                 return !empty(trim($word)) && strlen(trim($word)) > 1; // Skip single characters
             });
 
             if (!empty($searchWords)) {
-                $q->where(function($nameQuery) use ($searchWords) {
+                $q->where(function ($nameQuery) use ($searchWords) {
                     // Search for each word in the name
                     foreach ($searchWords as $word) {
                         $trimmedWord = trim($word);
-                        $nameQuery->where('name', 'like', "%".$trimmedWord."%");
+                        $nameQuery->where('name', 'like', "%" . $trimmedWord . "%");
                     }
                 });
 
                 // Also search for any word match (OR condition)
-                $q->orWhere(function($nameQuery) use ($searchWords) {
+                $q->orWhere(function ($nameQuery) use ($searchWords) {
                     foreach ($searchWords as $word) {
                         $trimmedWord = trim($word);
-                        $nameQuery->orWhere('name', 'like', "%".$trimmedWord."%");
+                        $nameQuery->orWhere('name', 'like', "%" . $trimmedWord . "%");
                     }
                 });
             }
 
             // Search for the complete term in name
-            $q->orWhere('name', 'like', "%".$searchTerm."%");
+            $q->orWhere('name', 'like', "%" . $searchTerm . "%");
         });
     }
-
 }
