@@ -668,7 +668,7 @@ class IncidentController extends Controller
                         ->orWhereIn('employee_number', $employeesVLCPC);
                 });
             });
-        } elseif ($generalDirectionId == 17) {
+        }/* elseif ($generalDirectionId == 17) {
             // GD 17: Incluir TODOS los empleados especiales (VLCPC + Procesos)
             $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId, $allSpecialEmployees) {
                 $employee->where(function ($q) use ($generalDirectionId, $allSpecialEmployees) {
@@ -676,7 +676,7 @@ class IncidentController extends Controller
                         ->orWhereIn('employee_number', $allSpecialEmployees);
                 });
             });
-        } else {
+        }*/ else {
             // Resto de GDs: Comportamiento normal
             $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId) {
                 $employee->where('general_direction_id', $generalDirectionId);
