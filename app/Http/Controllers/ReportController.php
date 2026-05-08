@@ -36,7 +36,27 @@ class ReportController extends Controller
             ->get()
             ->all();
 
-        $generalDirectionId = Auth::user()->general_direction_id;
+        $AUTH_USER = Auth::user();
+        $generalDirectionId = $AUTH_USER->general_direction_id;
+
+        // * Filter General Directions based on user level and special rules
+        if ($AUTH_USER->level_id > 1) {
+            // Non-admin users: apply access control based on general_direction_id
+            $allowedGdIds = [$AUTH_USER->general_direction_id];
+
+            // Special rules for specific General Directions
+            if ($AUTH_USER->general_direction_id == 16) {
+                // GD 16: can see 16, 17, 18
+                $allowedGdIds = [16, 17, 18];
+            } elseif ($AUTH_USER->general_direction_id == 17) {
+                // GD 17: can see 17 and 18 (with specific employees)
+                $allowedGdIds = [17, 18];
+            }
+
+            $generalDirections = array_filter($generalDirections, function($gd) use ($allowedGdIds) {
+                return in_array($gd['id'], $allowedGdIds);
+            });
+        }
 
         $breadcrumbs = array(
             ["name" => "Inicio", "href" => "/dashboard"],
@@ -89,6 +109,28 @@ class ReportController extends Controller
         // * retrive the general_direction based on user level
         if ($AUTH_USER->level_id == 1 && $request->has('gd'))/*Admin*/ {
             $generalDirection = GeneralDirection::where('id', $request->query('gd'))->first();
+        } else if ($AUTH_USER->level_id == 2 && $request->has('gd')) {
+            // Level 2 users (GD managers) can select from their allowed GDs
+            $requestedGdId = $request->query('gd');
+            $allowedGdIds = [$AUTH_USER->general_direction_id];
+
+            // Special rules for specific General Directions
+            if ($AUTH_USER->general_direction_id == 16) {
+                // GD 16: can see 16, 17, 18
+                $allowedGdIds = [16, 17, 18];
+            } elseif ($AUTH_USER->general_direction_id == 17) {
+                // GD 17: can see 17 and 18
+                $allowedGdIds = [17, 18];
+            }
+
+            // Validate that the requested GD is allowed
+            if (in_array($requestedGdId, $allowedGdIds)) {
+                $generalDirection = GeneralDirection::where('id', $requestedGdId)->first();
+            } else {
+                return redirect()->back()->withErrors([
+                    "message" => "No tienes permiso para acceder a esta dirección general."
+                ])->withInput();
+            }
         } else {
             $generalDirection = GeneralDirection::where('id', $AUTH_USER->general_direction_id)->first();
         }
@@ -128,6 +170,28 @@ class ReportController extends Controller
         // * retrive the general_direction based on user level
         if ($AUTH_USER->level_id == 1 && $request->has('gd'))/*Admin*/ {
             $generalDirection = GeneralDirection::where('id', $request->query('gd'))->first();
+        } else if ($AUTH_USER->level_id == 2 && $request->has('gd')) {
+            // Level 2 users (GD managers) can select from their allowed GDs
+            $requestedGdId = $request->query('gd');
+            $allowedGdIds = [$AUTH_USER->general_direction_id];
+
+            // Special rules for specific General Directions
+            if ($AUTH_USER->general_direction_id == 16) {
+                // GD 16: can see 16, 17, 18
+                $allowedGdIds = [16, 17, 18];
+            } elseif ($AUTH_USER->general_direction_id == 17) {
+                // GD 17: can see 17 and 18
+                $allowedGdIds = [17, 18];
+            }
+
+            // Validate that the requested GD is allowed
+            if (in_array($requestedGdId, $allowedGdIds)) {
+                $generalDirection = GeneralDirection::where('id', $requestedGdId)->first();
+            } else {
+                return redirect()->back()->withErrors([
+                    "message" => "No tienes permiso para acceder a esta dirección general."
+                ])->withInput();
+            }
         } else {
             $generalDirection = GeneralDirection::where('id', $AUTH_USER->general_direction_id)->first();
         }
@@ -391,7 +455,7 @@ class ReportController extends Controller
     {
 
         // * get employees of the current general-direction
-        $employeesQuery = Employee::with(['workingHours'])
+        $employeesQuery = Employee::with(['workingHours', 'generalDirection', 'direction'])
             ->select('id', 'general_direction_id', 'direction_id', 'subdirectorate_id', 'department_id', 'plantilla_id', 'name', 'employee_number')
             ->where('status_id', 1)
             ->where('active', 1);

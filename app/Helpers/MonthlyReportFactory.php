@@ -159,6 +159,7 @@ class MonthlyReportFactory {
 
         return array(
             'name' => $employee->name,
+            'direction' => $employee->direction->name ?? 'Sin dirección',
             'checadas' => $checadas
         );
 

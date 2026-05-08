@@ -45,7 +45,26 @@ class IncidentController extends Controller
 
     function index(Request $request)
     {
-        $generalDirecctionId = $request->filled('gdi') ? $request->input("gdi") : intval(Auth::user()->general_direction_id);
+        $AUTH_USER = Auth::user();
+        $generalDirecctionId = $request->filled('gdi') ? $request->input("gdi") : intval($AUTH_USER->general_direction_id);
+        
+        // * Validate GD access for level 2 users
+        if ($AUTH_USER->level_id == 2) {
+            $allowedGdIds = [$AUTH_USER->general_direction_id];
+
+            // Special rules for specific General Directions
+            if ($AUTH_USER->general_direction_id == 16) {
+                $allowedGdIds = [16, 17, 18];
+            } elseif ($AUTH_USER->general_direction_id == 17) {
+                $allowedGdIds = [17, 18];
+            }
+
+            // Validate that the requested GD is allowed
+            if (!in_array($generalDirecctionId, $allowedGdIds)) {
+                $generalDirecctionId = $AUTH_USER->general_direction_id;
+            }
+        }
+
         $repType = $request->filled('t') ? $request->input("t") : 'monthly';
         $year = $request->filled('y') ? $request->input("y") : Carbon::now()->year;
         if ($request->filled('p')) {
@@ -81,6 +100,26 @@ class IncidentController extends Controller
         // * catalog incident status
         $incidentStatuses = IncidentState::where("id", ">", 1)->select('id', 'name')->get()->toArray();
         $generalDirections = GeneralDirection::select(['id', 'name'])->get()->sortBy('name')->all();
+
+        // * Filter General Directions based on user level and special rules
+        if ($AUTH_USER->level_id > 1) {
+            // Non-admin users: apply access control based on general_direction_id
+            $allowedGdIds = [$AUTH_USER->general_direction_id];
+
+            // Special rules for specific General Directions
+            if ($AUTH_USER->general_direction_id == 16) {
+                // GD 16: can see 16, 17, 18
+                $allowedGdIds = [16, 17, 18];
+            } elseif ($AUTH_USER->general_direction_id == 17) {
+                // GD 17: can see 17 and 18
+                $allowedGdIds = [17, 18];
+            }
+
+            $generalDirections = array_filter($generalDirections, function($gd) use ($allowedGdIds) {
+                return in_array($gd['id'], $allowedGdIds);
+            });
+        }
+
         $reportTypes = [
             "monthly" => "Mensual",
             "fortnight" => "Quincenal"

@@ -158,7 +158,7 @@ function changePage(pageNumber){
                         id="gd" 
                         v-model="form.gd" 
                         v-on:change="handleGeneralDirectionSelect" 
-                        :disabled="$page.props.auth.user.level_id > 1" 
+                        :disabled="$page.props.auth.user.level_id > 2" 
                     >
                         <option selected value="0">Todos</option>
                         <option v-for="item in general_direction" :key="item.id" :value="item.id" > {{item.name }}</option>

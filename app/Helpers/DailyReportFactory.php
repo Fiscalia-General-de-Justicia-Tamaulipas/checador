@@ -73,6 +73,7 @@ class DailyReportFactory {
         $responseData = array();
         $responseData['name'] = $employee['name'];
         $responseData['employee_number'] = substr( $employee['plantilla_id'], 1);
+        $responseData['direction'] = $employee['general_direction']['abbreviation'] ?? 'Sin dirección';
         $responseData['checkin'] = 'S/H';
         $responseData['toeat'] = 'S/H';
         $responseData['toarrive'] = 'S/H';

@@ -109,7 +109,8 @@ class DailyReportPdfFactory extends Fpdf {
             }
 
             $this->Cell(10, $rowHeight, $loop, 0, 0, 'L', 1);
-            $this->Cell(105, $rowHeight, mb_convert_encoding($employee['name'], 'ISO-8859-1', 'UTF-8'), 0, 0, 'L', 1);
+            $this->Cell(85, $rowHeight, mb_convert_encoding($employee['name'], 'ISO-8859-1', 'UTF-8'), 0, 0, 'L', 1);
+            $this->Cell(25, $rowHeight, mb_convert_encoding($employee['direction'] ?? 'S/D', 'ISO-8859-1', 'UTF-8'), 0, 0, 'L', 1);
             // Implement logic
             $this->Cell(20, $rowHeight, $employee['checkin'], 0, 0, 'C', 1);
             $this->Cell(20, $rowHeight, $employee['toeat'], 0, 0,  'C', 1);
@@ -142,7 +143,8 @@ class DailyReportPdfFactory extends Fpdf {
 
         // First row - static cells
         $this->Cell(10, $headerHeight, '#', 'B', 0, 'L', 1);
-        $this->Cell(105, $headerHeight, 'Nombre', 'B', 0, 'L', 1);
+        $this->Cell(85, $headerHeight, 'Nombre', 'B', 0, 'L', 1);
+        $this->Cell(25, $headerHeight, 'Direccion', 'B', 0, 'L', 1);
         $this->Cell(20, $headerHeight, 'Entrada', 'B', 0, 'C', 1);
 
         // Save X position for next row

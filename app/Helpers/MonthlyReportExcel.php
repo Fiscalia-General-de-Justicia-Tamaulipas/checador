@@ -98,7 +98,8 @@ class MonthlyReportExcel {
     private function makeEmployeeRow(Worksheet $sheet, array $employee, int $row, int $rowEnd, int $rowC){
 
         $sheet->mergeCells("A$row:A$rowEnd"); // Merge cells name
-        $sheet->setCellValue("A$row", $employee['name']); // Name
+        $employeeText = $employee['name'] . "\n(" . ($employee['direction'] ?? 'Sin dirección') . ")";
+        $sheet->setCellValue("A$row", $employeeText); // Name + Direction
         $sheet->getStyle("A$row")->getAlignment()->setWrapText(true);
         // Center name
         $sheet->getStyle("A$row")->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);

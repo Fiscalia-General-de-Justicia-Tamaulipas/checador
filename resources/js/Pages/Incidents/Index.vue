@@ -228,7 +228,7 @@ function handleMakeIncidentsJob(){
                 <template #content>
                     <form @submit.prevent="makeReportClick" class="flex pt-1 gap-1 items-center">
 
-                        <InputSelect v-model="form.general_direction_id" id="general_direction_id" class="max-w-[24rem]" :disabled="$page.props.auth.user.level_id > 1">
+                        <InputSelect v-model="form.general_direction_id" id="general_direction_id" class="max-w-[24rem]" :disabled="$page.props.auth.user.level_id > 2">
                             <option value="" class="uppercase"> Seleccione una opcion</option>
                             <option v-for="element in generalDirections" :value="element.id" class="uppercase"> {{ element.name }}</option>
                         </InputSelect>

@@ -62,14 +62,33 @@ class EmployeeController extends Controller
         $generalDirectionId = null;
         $directionId = 0;
         $subdirectionId = 0;
+        $AUTH_USER = Auth::user();
 
         // * set by defaul the user general direction asigneds
-        $generalDirectionId = Auth::user()->general_direction_id;
+        $generalDirectionId = $AUTH_USER->general_direction_id;
 
-        if(Auth::user()->level_id > 1){
-            if( Auth::user()->level_id > 2){
-                $directionId = Auth::user()->direction_id;
+        if($AUTH_USER->level_id > 1){
+            if( $AUTH_USER->level_id > 2){
+                $directionId = $AUTH_USER->direction_id;
             }else{
+                // Level 2: can select from allowed GDs
+                if($request->filled('gd')){
+                    $requestedGd = $request->query("gd");
+                    $allowedGdIds = [$AUTH_USER->general_direction_id];
+
+                    // Special rules for specific General Directions
+                    if ($AUTH_USER->general_direction_id == 16) {
+                        $allowedGdIds = [16, 17, 18];
+                    } elseif ($AUTH_USER->general_direction_id == 17) {
+                        $allowedGdIds = [17, 18];
+                    }
+
+                    // Validate that the requested GD is allowed
+                    if (in_array($requestedGd, $allowedGdIds)) {
+                        $generalDirectionId = $requestedGd;
+                    }
+                }
+
                 $directionId = $request->filled('d') ?$request->query("d") : 0;
             }
 
@@ -89,7 +108,27 @@ class EmployeeController extends Controller
         // * get catalogs
         $generalDirections = GeneralDirection::select('id', 'name')
             ->orderBy('name', 'asc')
-            ->get();
+            ->get()
+            ->all();
+
+        // * Filter General Directions based on user level and special rules
+        if ($AUTH_USER->level_id > 1) {
+            // Non-admin users: apply access control based on general_direction_id
+            $allowedGdIds = [$AUTH_USER->general_direction_id];
+
+            // Special rules for specific General Directions
+            if ($AUTH_USER->general_direction_id == 16) {
+                // GD 16: can see 16, 17, 18
+                $allowedGdIds = [16, 17, 18];
+            } elseif ($AUTH_USER->general_direction_id == 17) {
+                // GD 17: can see 17 and 18
+                $allowedGdIds = [17, 18];
+            }
+
+            $generalDirections = array_filter($generalDirections, function($gd) use ($allowedGdIds) {
+                return in_array($gd['id'], $allowedGdIds);
+            });
+        }
 
         $directions = Direction::select('id', 'name', 'general_direction_id')
             ->where('general_direction_id', $generalDirectionId)

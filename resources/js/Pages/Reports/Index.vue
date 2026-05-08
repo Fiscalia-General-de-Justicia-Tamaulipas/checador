@@ -128,7 +128,7 @@ function handleReportMonthlyClick(){
 
                         <div role="form-group">
                             <InputLabel for="dailyGeneralDirectionId" value="Area" />
-                            <InputSelect id="dailyGeneralDirectionId" v-model="formDaily.generalDirectionId" class="min-w-64 max-w-[24rem]" required :disabled="$page.props.auth.user.level_id > 1">
+                            <InputSelect id="dailyGeneralDirectionId" v-model="formDaily.generalDirectionId" class="min-w-64 max-w-[24rem]" required :disabled="$page.props.auth.user.level_id > 2">
                                 <option value=""> Selecione una opcion</option>
                                 <option v-for="item in generalDirections" :key="item.id" :value="item.id"> {{ item.name }}</option>
                             </InputSelect>
@@ -165,7 +165,7 @@ function handleReportMonthlyClick(){
 
                         <div role="form-group">
                             <InputLabel for="monthlyGeneralDirectionId" value="Area" />
-                            <InputSelect id="monthlyGeneralDirectionId" v-model="formMonthly.generalDirectionId" class="min-w-64 max-w-[24rem]" :disabled="$page.props.auth.user.level_id > 1" >
+                            <InputSelect id="monthlyGeneralDirectionId" v-model="formMonthly.generalDirectionId" class="min-w-64 max-w-[24rem]" :disabled="$page.props.auth.user.level_id > 2" >
                                 <option value="">Seleccione una opción</option>
                                 <option v-for="item in generalDirections" :key="item.id" :value="item.id"> {{ item.name }}</option>
                             </InputSelect>
