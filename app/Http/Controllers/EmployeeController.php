@@ -37,6 +37,7 @@ use App\Http\Requests\{
 };
 use App\Helpers\EmployeeKardexRecords;
 use App\Helpers\EmployeeKardexExcel;
+use App\Helpers\ValidateAccessEmployee;
 
 class EmployeeController extends Controller
 {
@@ -76,12 +77,7 @@ class EmployeeController extends Controller
                     $requestedGd = $request->query("gd");
                     $allowedGdIds = [$AUTH_USER->general_direction_id];
 
-                    // Special rules for specific General Directions
-                    if ($AUTH_USER->general_direction_id == 16) {
-                        $allowedGdIds = [16, 17, 18];
-                    } elseif ($AUTH_USER->general_direction_id == 17) {
-                        $allowedGdIds = [17, 18];
-                    }
+                    $allowedGdIds = ValidateAccessEmployee::getAllowedGeneralDirectionIds($AUTH_USER);
 
                     // Validate that the requested GD is allowed
                     if (in_array($requestedGd, $allowedGdIds)) {
@@ -113,17 +109,7 @@ class EmployeeController extends Controller
 
         // * Filter General Directions based on user level and special rules
         if ($AUTH_USER->level_id > 1) {
-            // Non-admin users: apply access control based on general_direction_id
-            $allowedGdIds = [$AUTH_USER->general_direction_id];
-
-            // Special rules for specific General Directions
-            if ($AUTH_USER->general_direction_id == 16) {
-                // GD 16: can see 16, 17, 18
-                $allowedGdIds = [16, 17, 18];
-            } elseif ($AUTH_USER->general_direction_id == 17) {
-                // GD 17: can see 17 and 18
-                $allowedGdIds = [17, 18];
-            }
+            $allowedGdIds = ValidateAccessEmployee::getAllowedGeneralDirectionIds($AUTH_USER);
 
             $generalDirections = array_filter($generalDirections, function ($gd) use ($allowedGdIds) {
                 return in_array($gd['id'], $allowedGdIds);

@@ -13,6 +13,7 @@ use App\Models\{
     WorkingHours,
     WorkingDays
 };
+use App\Helpers\ValidateAccessEmployee;
 use App\ViewModels\EmployeeViewModel;
 
 class EmployeeService
@@ -65,6 +66,10 @@ class EmployeeService
                         $query->where('general_direction_id', 18)
                             ->whereNotIn('employee_number', $employeesVLCPC)
                             ->whereNotIn('employee_number', $employeesProcesos);
+                    }
+                    // GD = 12: Incluir empleados de GD 11, 12, 13 y 14
+                    elseif ($generalDirectionId == 12) {
+                        $query->whereIn('general_direction_id', [11, 12, 13, 14]);
                     }
                     // GD = 16: Incluir todos los empleados de GD 16, 17 y 18
                     elseif ($generalDirectionId == 16) {
@@ -121,7 +126,12 @@ class EmployeeService
                             ->orWhereIn('employee_number', $employeesProcesos);
                     });
                 } else {
-                    $query->where('general_direction_id', $userGeneralDirectionId);
+                    $allowedGdIds = ValidateAccessEmployee::getAllowedGeneralDirectionIds($__authUser);
+                    if (!empty($allowedGdIds)) {
+                        $query->whereIn('general_direction_id', $allowedGdIds);
+                    } else {
+                        $query->where('general_direction_id', $userGeneralDirectionId);
+                    }
                 }
             } else {
                 if (isset($filters['general_direction_id'])) {
@@ -132,6 +142,8 @@ class EmployeeService
                         $query->where('general_direction_id', 18)
                             ->whereNotIn('employee_number', $employeesVLCPC)
                             ->whereNotIn('employee_number', $employeesProcesos);
+                    } elseif ($generalDirectionId == 12) {
+                        $query->whereIn('general_direction_id', [11, 12, 13, 14]);
                     } elseif ($generalDirectionId == 16) {
                         $query->whereIn('general_direction_id', [16, 17, 18]);
                     } elseif ($generalDirectionId == 17) {
@@ -244,7 +256,12 @@ class EmployeeService
             } else {
                 // Otras GDs: Comportamiento normal por nivel
                 if ($__currentLevel >= 2) {
-                    $query->where('general_direction_id', $userGeneralDirectionId);
+                    $allowedGdIds = ValidateAccessEmployee::getAllowedGeneralDirectionIds($__authUser);
+                    if (!empty($allowedGdIds)) {
+                        $query->whereIn('general_direction_id', $allowedGdIds);
+                    } else {
+                        $query->where('general_direction_id', $userGeneralDirectionId);
+                    }
                 }
             }
 

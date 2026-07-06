@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use App\Helpers\ValidateAccessEmployee;
 use App\Services\{
     EmployeeService,
     JustificationService
@@ -52,9 +53,9 @@ class JustificationController extends Controller
                     return $query->whereHas('employee', function($emp) use($__currentLevel, $__authUser) {
                         if ($__currentLevel >= 2)
                         {
-                            // GD 16 puede ver empleados de GD 16, 17 y 18
-                            if ($__authUser->general_direction_id == 16) {
-                                $emp->whereIn('general_direction_id', [16, 17, 18]);
+                            $allowedGdIds = ValidateAccessEmployee::getAllowedGeneralDirectionIds($__authUser);
+                            if (!empty($allowedGdIds)) {
+                                $emp->whereIn('general_direction_id', $allowedGdIds);
                             } else {
                                 $emp->where('general_direction_id', $__authUser->general_direction_id );
                             }

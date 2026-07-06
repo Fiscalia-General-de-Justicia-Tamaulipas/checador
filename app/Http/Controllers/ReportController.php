@@ -16,6 +16,7 @@ use App\Models\{
 };
 use App\Helpers\DailyReportFactory;
 use App\Helpers\DailyReportPdfFactory;
+use App\Helpers\ValidateAccessEmployee;
 use Inertia\Inertia;
 use Date;
 use Illuminate\Http\JsonResponse;
@@ -41,17 +42,7 @@ class ReportController extends Controller
 
         // * Filter General Directions based on user level and special rules
         if ($AUTH_USER->level_id > 1) {
-            // Non-admin users: apply access control based on general_direction_id
-            $allowedGdIds = [$AUTH_USER->general_direction_id];
-
-            // Special rules for specific General Directions
-            if ($AUTH_USER->general_direction_id == 16) {
-                // GD 16: can see 16, 17, 18
-                $allowedGdIds = [16, 17, 18];
-            } elseif ($AUTH_USER->general_direction_id == 17) {
-                // GD 17: can see 17 and 18 (with specific employees)
-                $allowedGdIds = [17, 18];
-            }
+            $allowedGdIds = ValidateAccessEmployee::getAllowedGeneralDirectionIds($AUTH_USER);
 
             $generalDirections = array_filter($generalDirections, function($gd) use ($allowedGdIds) {
                 return in_array($gd['id'], $allowedGdIds);
@@ -112,16 +103,7 @@ class ReportController extends Controller
         } else if ($AUTH_USER->level_id == 2 && $request->has('gd')) {
             // Level 2 users (GD managers) can select from their allowed GDs
             $requestedGdId = $request->query('gd');
-            $allowedGdIds = [$AUTH_USER->general_direction_id];
-
-            // Special rules for specific General Directions
-            if ($AUTH_USER->general_direction_id == 16) {
-                // GD 16: can see 16, 17, 18
-                $allowedGdIds = [16, 17, 18];
-            } elseif ($AUTH_USER->general_direction_id == 17) {
-                // GD 17: can see 17 and 18
-                $allowedGdIds = [17, 18];
-            }
+            $allowedGdIds = ValidateAccessEmployee::getAllowedGeneralDirectionIds($AUTH_USER);
 
             // Validate that the requested GD is allowed
             if (in_array($requestedGdId, $allowedGdIds)) {
@@ -173,16 +155,7 @@ class ReportController extends Controller
         } else if ($AUTH_USER->level_id == 2 && $request->has('gd')) {
             // Level 2 users (GD managers) can select from their allowed GDs
             $requestedGdId = $request->query('gd');
-            $allowedGdIds = [$AUTH_USER->general_direction_id];
-
-            // Special rules for specific General Directions
-            if ($AUTH_USER->general_direction_id == 16) {
-                // GD 16: can see 16, 17, 18
-                $allowedGdIds = [16, 17, 18];
-            } elseif ($AUTH_USER->general_direction_id == 17) {
-                // GD 17: can see 17 and 18
-                $allowedGdIds = [17, 18];
-            }
+            $allowedGdIds = ValidateAccessEmployee::getAllowedGeneralDirectionIds($AUTH_USER);
 
             // Validate that the requested GD is allowed
             if (in_array($requestedGdId, $allowedGdIds)) {
@@ -481,11 +454,20 @@ class ReportController extends Controller
             28875, // MARIA DE LOURDES ARRATIA MALDONADO
         ];
 
+        $allowedGdIds = Auth::user()->level_id > 1 ? ValidateAccessEmployee::getAllowedGeneralDirectionIds(Auth::user()) : [];
+        if (!empty($allowedGdIds) && !in_array($generalDirectionId, $allowedGdIds, true)) {
+            $generalDirectionId = Auth::user()->general_direction_id;
+        }
+
         // GD = 18: Excluir empleados específicos
         if ($generalDirectionId == 18) {
             $employeesQuery->where('general_direction_id', 18)
                 ->whereNotIn('employee_number', $employeesVLCPC)
                 ->whereNotIn('employee_number', $employeesProcesos);
+        }
+        // GD = 12: Incluir empleados de GD 11, 12, 13 y 14
+        elseif ($generalDirectionId == 12) {
+            $employeesQuery->whereIn('general_direction_id', [11, 12, 13, 14]);
         }
         // GD = 16: Incluir todos los empleados de GD 16, 17 y 18
         elseif ($generalDirectionId == 16) {

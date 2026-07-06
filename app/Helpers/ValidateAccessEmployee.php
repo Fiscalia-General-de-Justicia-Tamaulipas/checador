@@ -27,6 +27,40 @@ class ValidateAccessEmployee
     ];
 
     /**
+     * Obtener las direcciones generales que un usuario puede consultar.
+     */
+    public static function getAllowedGeneralDirectionIds(User $user): array
+    {
+        if ($user->level_id == 1) {
+            return [];
+        }
+
+        $allowedGdIds = [$user->general_direction_id];
+
+        if ($user->general_direction_id == 12) {
+            return [11, 12, 13, 14];
+        }
+
+        if ($user->general_direction_id == 16) {
+            return [16, 17, 18];
+        }
+
+        if ($user->general_direction_id == 17) {
+            return [17, 18];
+        }
+
+        return $allowedGdIds;
+    }
+
+    private static function hasGeneralDirectionScopeAccess(User $user, Employee $employee): bool
+    {
+        $allowedGeneralDirections = self::getAllowedGeneralDirectionIds($user);
+
+        return !empty($allowedGeneralDirections)
+            && in_array($employee->general_direction_id, $allowedGeneralDirections, true);
+    }
+
+    /**
      * validate if the user has access to the employee
      *
      * @return bool
@@ -50,19 +84,23 @@ class ValidateAccessEmployee
 
             // Reglas normales de jerarquía
             if ($__currentLevel >= 2) {
-                if ($user->general_direction_id != $employee->general_direction_id) {
+                if (!self::hasGeneralDirectionScopeAccess($user, $employee)) {
                     $__hasAccess = false;
                 }
             }
 
             if ($__currentLevel >= 3 && $__hasAccess) {
-                if ($user->direction_id != $employee->direction_id) {
+                if (!self::hasGeneralDirectionScopeAccess($user, $employee)) {
+                    $__hasAccess = false;
+                } elseif ($user->direction_id != $employee->direction_id && !self::hasGeneralDirectionScopeAccess($user, $employee)) {
                     $__hasAccess = false;
                 }
             }
 
             if ($__currentLevel >= 4 && $__hasAccess) {
-                if ($user->subdirectorate_id != $employee->subdirectorate_id) {
+                if (!self::hasGeneralDirectionScopeAccess($user, $employee)) {
+                    $__hasAccess = false;
+                } elseif ($user->subdirectorate_id != $employee->subdirectorate_id && !self::hasGeneralDirectionScopeAccess($user, $employee)) {
                     $__hasAccess = false;
                 }
             }

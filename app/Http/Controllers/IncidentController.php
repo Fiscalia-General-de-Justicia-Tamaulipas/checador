@@ -14,6 +14,7 @@ use Inertia\Inertia;
 use App\Interfaces\EmployeeIncidentInterface;
 use App\ViewModels\EmployeeViewModel;
 use App\Helpers\IncidentsReport;
+use App\Helpers\ValidateAccessEmployee;
 use App\Services\{
     EmployeeService,
     IncidentService
@@ -50,14 +51,7 @@ class IncidentController extends Controller
         
         // * Validate GD access for level 2 users
         if ($AUTH_USER->level_id == 2) {
-            $allowedGdIds = [$AUTH_USER->general_direction_id];
-
-            // Special rules for specific General Directions
-            if ($AUTH_USER->general_direction_id == 16) {
-                $allowedGdIds = [16, 17, 18];
-            } elseif ($AUTH_USER->general_direction_id == 17) {
-                $allowedGdIds = [17, 18];
-            }
+            $allowedGdIds = ValidateAccessEmployee::getAllowedGeneralDirectionIds($AUTH_USER);
 
             // Validate that the requested GD is allowed
             if (!in_array($generalDirecctionId, $allowedGdIds)) {
@@ -103,17 +97,7 @@ class IncidentController extends Controller
 
         // * Filter General Directions based on user level and special rules
         if ($AUTH_USER->level_id > 1) {
-            // Non-admin users: apply access control based on general_direction_id
-            $allowedGdIds = [$AUTH_USER->general_direction_id];
-
-            // Special rules for specific General Directions
-            if ($AUTH_USER->general_direction_id == 16) {
-                // GD 16: can see 16, 17, 18
-                $allowedGdIds = [16, 17, 18];
-            } elseif ($AUTH_USER->general_direction_id == 17) {
-                // GD 17: can see 17 and 18
-                $allowedGdIds = [17, 18];
-            }
+            $allowedGdIds = ValidateAccessEmployee::getAllowedGeneralDirectionIds($AUTH_USER);
 
             $generalDirections = array_filter($generalDirections, function($gd) use ($allowedGdIds) {
                 return in_array($gd['id'], $allowedGdIds);
@@ -693,6 +677,12 @@ class IncidentController extends Controller
         // * get the incidents aplicando reglas especiales según la GD
         $incidentsQuery = Incident::whereBetween('date', [$from, $to]);
 
+        $allowedGdIds = Auth::user()->level_id > 1 ? ValidateAccessEmployee::getAllowedGeneralDirectionIds(Auth::user()) : [];
+        if (!empty($allowedGdIds) && !in_array($generalDirectionId, $allowedGdIds, true)) {
+            $generalDirectionId = Auth::user()->general_direction_id;
+        }
+
+        // Aplicar reglas especiales según la GD seleccionada
         // Aplicar reglas especiales según la GD seleccionada y GD del usuario
         if ($generalDirectionId == 18) {
             // GD 18: Excluir empleados específicos, pero permitir EMPLOYEES_PROCESOS si es usuario de GD 17
@@ -705,6 +695,11 @@ class IncidentController extends Controller
                     $employee->where('general_direction_id', $generalDirectionId)
                         ->whereNotIn('employee_number', array_merge($employeesVLCPC, $employeesProcesos));
                 }
+            });
+        } elseif ($generalDirectionId == 12) {
+            // GD 12: Incluir empleados de GD 11, 12, 13 y 14
+            $incidentsQuery->whereHas("employee", function ($employee) {
+                $employee->whereIn('general_direction_id', [11, 12, 13, 14]);
             });
         } elseif ($generalDirectionId == 16) {
             // GD 16: Incluir todos los empleados de GD 16, 17 y 18
