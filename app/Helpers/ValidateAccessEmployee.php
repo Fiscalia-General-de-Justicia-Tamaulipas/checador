@@ -11,9 +11,13 @@ class ValidateAccessEmployee
     private const EMPLOYEES_VLCPC = [
         //20902, // BRENDA LIZZETH SANCHEZ PICASSO
         10829, // HOMERO GONZALEZ SANCHEZ
-        48461, // YARAHI JOSELIN SILVERIO DUQUE
         7057,  // MA. IGNACIA RUIZ RETA
-        20882, // YESENIA COLUNGA BRISEÑO
+    ];
+
+    private const EMPLOYEES_VICEFISCALIA = [
+        36196, // CESAR EDUARDO ACOSTA SIERRA
+        25904, // FRANCISCO JAVIER VALLEJO GARCIA
+        25823, // MIRNA ELIZABETH RODRIGUEZ CANO
     ];
 
     private const EMPLOYEES_PROCESOS = [
@@ -88,7 +92,11 @@ class ValidateAccessEmployee
 
         // Caso 1: Usuario de GD 16 (VLCPC) puede ver empleados de GD 17 y 18
         if ($userGeneralDirectionId == 16) {
-            if ($employeeGeneralDirectionId == 17 || $employeeGeneralDirectionId == 18) {
+            if (
+                $employeeGeneralDirectionId == 17 ||
+                $employeeGeneralDirectionId == 18 ||
+                in_array($employeeNumber, self::EMPLOYEES_VICEFISCALIA)
+            ) {
                 return true;
             }
         }
@@ -104,6 +112,7 @@ class ValidateAccessEmployee
         if ($userGeneralDirectionId == 18) {
             if (
                 in_array($employeeNumber, self::EMPLOYEES_VLCPC) ||
+                in_array($employeeNumber, self::EMPLOYEES_VICEFISCALIA) ||
                 in_array($employeeNumber, self::EMPLOYEES_PROCESOS)
             ) {
                 return false;
@@ -122,7 +131,7 @@ class ValidateAccessEmployee
     static function getExcludedEmployees(int $generalDirectionId)
     {
         if ($generalDirectionId == 18) {
-            return array_merge(self::EMPLOYEES_VLCPC, self::EMPLOYEES_PROCESOS);
+            return array_merge(self::EMPLOYEES_VLCPC, self::EMPLOYEES_VICEFISCALIA, self::EMPLOYEES_PROCESOS);
         }
 
         return [];
@@ -137,7 +146,7 @@ class ValidateAccessEmployee
     static function getIncludedEmployees(int $generalDirectionId)
     {
         if ($generalDirectionId == 16) {
-            return self::EMPLOYEES_VLCPC;
+            return array_merge(self::EMPLOYEES_VLCPC, self::EMPLOYEES_VICEFISCALIA);
         }
 
         if ($generalDirectionId == 17) {

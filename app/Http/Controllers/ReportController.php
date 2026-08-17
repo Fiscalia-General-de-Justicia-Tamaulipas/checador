@@ -465,9 +465,13 @@ class ReportController extends Controller
         $employeesVLCPC = [
             //20902, // BRENDA LIZZETH SANCHEZ PICASSO
             10829, // HOMERO GONZALEZ SANCHEZ
-            48461, // YARAHI JOSELIN SILVERIO DUQUE
             7057, // MA. IGNACIA RUIZ RETA
-            20882, // YESENIA COLUNGA BRISEÑO
+        ];
+
+        $employeesVicefiscalia = [
+            36196, // CESAR EDUARDO ACOSTA SIERRA
+            25904, // FRANCISCO JAVIER VALLEJO GARCIA
+            25823, // MIRNA ELIZABETH RODRIGUEZ CANO
         ];
 
         // GENERAL DIRECTION PROCESOS ID = 17
@@ -484,12 +488,14 @@ class ReportController extends Controller
         // GD = 18: Excluir empleados específicos
         if ($generalDirectionId == 18) {
             $employeesQuery->where('general_direction_id', 18)
-                ->whereNotIn('employee_number', $employeesVLCPC)
-                ->whereNotIn('employee_number', $employeesProcesos);
+                ->whereNotIn('employee_number', array_merge($employeesVLCPC, $employeesVicefiscalia, $employeesProcesos));
         }
-        // GD = 16: Incluir todos los empleados de GD 16, 17 y 18
+        // GD = 16: Incluir todos los empleados de GD 16, 17 y 18, así como los empleados reasignados a Vicefiscalía
         elseif ($generalDirectionId == 16) {
-            $employeesQuery->whereIn('general_direction_id', [16, 17, 18]);
+            $employeesQuery->where(function ($query) use ($employeesVicefiscalia) {
+                $query->whereIn('general_direction_id', [16, 17, 18])
+                    ->orWhereIn('employee_number', $employeesVicefiscalia);
+            });
         } elseif ($generalDirectionId == 17) {
             $employeesQuery->where(function ($query) use ($employeesProcesos) {
                 $query->where('general_direction_id', 17)

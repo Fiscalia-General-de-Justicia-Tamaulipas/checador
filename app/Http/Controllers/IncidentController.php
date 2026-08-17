@@ -672,9 +672,13 @@ class IncidentController extends Controller
         $employeesVLCPC = [
             //20902, // BRENDA LIZZETH SANCHEZ PICASSO
             10829, // HOMERO GONZALEZ SANCHEZ
-            48461, // YARAHI JOSELIN SILVERIO DUQUE
             7057,  // MA. IGNACIA RUIZ RETA
-            20882, // YESENIA COLUNGA BRISEÑO
+        ];
+
+        $employeesVicefiscalia = [
+            36196, // CESAR EDUARDO ACOSTA SIERRA
+            25904, // FRANCISCO JAVIER VALLEJO GARCIA
+            25823, // MIRNA ELIZABETH RODRIGUEZ CANO
         ];
 
         $employeesProcesos = [
@@ -688,7 +692,7 @@ class IncidentController extends Controller
         ];
 
         // Combinar todos los empleados especiales (para GD 17 que debe ver ambos grupos)
-        $allSpecialEmployees = array_merge($employeesVLCPC, $employeesProcesos);
+        $allSpecialEmployees = array_merge($employeesVLCPC, $employeesVicefiscalia, $employeesProcesos);
 
         // * get the incidents aplicando reglas especiales según la GD
         $incidentsQuery = Incident::whereBetween('date', [$from, $to]);
@@ -696,20 +700,23 @@ class IncidentController extends Controller
         // Aplicar reglas especiales según la GD seleccionada y GD del usuario
         if ($generalDirectionId == 18) {
             // GD 18: Excluir empleados específicos, pero permitir EMPLOYEES_PROCESOS si es usuario de GD 17
-            $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId, $userGeneralDirectionId, $employeesProcesos, $employeesVLCPC) {
+            $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId, $userGeneralDirectionId, $employeesProcesos, $employeesVLCPC, $employeesVicefiscalia) {
                 if ($userGeneralDirectionId == 17) {
                     // Usuario de GD 17 viendo GD 18: mostrar solo EMPLOYEES_PROCESOS
                     $employee->whereIn('employee_number', $employeesProcesos);
                 } else {
                     // Otros usuarios: excluir empleados especiales
                     $employee->where('general_direction_id', $generalDirectionId)
-                        ->whereNotIn('employee_number', array_merge($employeesVLCPC, $employeesProcesos));
+                        ->whereNotIn('employee_number', array_merge($employeesVLCPC, $employeesVicefiscalia, $employeesProcesos));
                 }
             });
         } elseif ($generalDirectionId == 16) {
-            // GD 16: Incluir todos los empleados de GD 16, 17 y 18
-            $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId) {
-                $employee->whereIn('general_direction_id', [16, 17, 18]);
+            // GD 16: Incluir todos los empleados de GD 16, 17 y 18, así como los reasignados a Vicefiscalía
+            $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId, $employeesVicefiscalia) {
+                $employee->where(function ($q) use ($generalDirectionId, $employeesVicefiscalia) {
+                    $q->whereIn('general_direction_id', [16, 17, 18])
+                        ->orWhereIn('employee_number', $employeesVicefiscalia);
+                });
             });
         } elseif ($generalDirectionId == 17) {
             // GD 17: Incluir empleados de GD 17 + EMPLOYEES_PROCESOS de GD 18
