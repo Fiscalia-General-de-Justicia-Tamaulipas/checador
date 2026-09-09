@@ -159,10 +159,33 @@ class MonthlyReportFactory {
 
         return array(
             'name' => $employee->name,
-            'direction' => $employee->direction->name ?? 'Sin dirección',
+            'direction' => $this->normalizeLocation($employee->direction->name ?? null),
+            'subdirection' => $this->normalizeLocation($employee->subdirectorate->name ?? null),
             'checadas' => $checadas
         );
 
+    }
+
+    private function normalizeLocation($value) {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        $normalized = mb_strtolower($value, 'UTF-8');
+        $unknownLabels = ['desconocido', 'sin dirección', 'sin direccion', 's/d', 'unknown', 'n/a', 'no especificado'];
+
+        foreach ($unknownLabels as $label) {
+            if ($normalized === $label || str_contains($normalized, $label)) {
+                return null;
+            }
+        }
+
+        return $value;
     }
 
     private function translateDayName($name) {
