@@ -87,7 +87,7 @@ class MonthlyReportExcel {
             ->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()
-            ->setARGB('033270');
+            ->setARGB('4b4b4b');
 
         $sheet->getStyle('A1')->getFont()
             ->getColor()
@@ -97,9 +97,14 @@ class MonthlyReportExcel {
 
     private function makeEmployeeRow(Worksheet $sheet, array $employee, int $row, int $rowEnd, int $rowC){
 
+        $location = $this->resolveEmployeeLocation($employee);
+
         $sheet->mergeCells("A$row:A$rowEnd"); // Merge cells name
-        $employeeText = $employee['name'] . "\n(" . ($employee['direction'] ?? 'Sin dirección') . ")";
-        $sheet->setCellValue("A$row", $employeeText); // Name + Direction
+        $employeeText = $employee['name'];
+        if ($location !== '') {
+            $employeeText .= "\n(" . $location . ")";
+        }
+        $sheet->setCellValue("A$row", $employeeText); // Name + location
         $sheet->getStyle("A$row")->getAlignment()->setWrapText(true);
         // Center name
         $sheet->getStyle("A$row")->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
@@ -132,13 +137,13 @@ class MonthlyReportExcel {
             ->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()
-            ->setARGB('b9c6d6');
+            ->setARGB('d9d9d9');
         
         $sheet->getStyle('C'.($rowC+1).':'.$column.($rowC+1))
             ->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()
-            ->setARGB('b9c6d6');
+            ->setARGB('d9d9d9');
         
         // Center numbers of the day
         $sheet->getStyle("B$rowC:$column$rowC")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
@@ -152,7 +157,22 @@ class MonthlyReportExcel {
             ->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()
-            ->setARGB('033270');
+            ->setARGB('666666');
+    }
+
+    private function resolveEmployeeLocation(array $employee): string {
+        $location = trim((string) ($employee['direction'] ?? ''));
+        $subdirection = trim((string) ($employee['subdirection'] ?? ''));
+
+        if ($location !== '' && !in_array(mb_strtolower($location, 'UTF-8'), ['desconocido', 'sin dirección', 'sin direccion', 's/d', 'unknown', 'n/a', 'no especificado'], true)) {
+            return $location;
+        }
+
+        if ($subdirection !== '' && !in_array(mb_strtolower($subdirection, 'UTF-8'), ['desconocido', 'sin dirección', 'sin direccion', 's/d', 'unknown', 'n/a', 'no especificado'], true)) {
+            return $subdirection;
+        }
+
+        return '';
     }
 
 }
