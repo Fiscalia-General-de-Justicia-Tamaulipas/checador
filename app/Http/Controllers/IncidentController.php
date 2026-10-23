@@ -673,6 +673,13 @@ class IncidentController extends Controller
             //20902, // BRENDA LIZZETH SANCHEZ PICASSO
             10829, // HOMERO GONZALEZ SANCHEZ
             7057,  // MA. IGNACIA RUIZ RETA
+            41611,
+            48853,
+            55506,
+            33539,
+            36533,
+            32981,
+            55136,
         ];
 
         $employeesVicefiscalia = [
@@ -712,10 +719,10 @@ class IncidentController extends Controller
             });
         } elseif ($generalDirectionId == 16) {
             // GD 16: Incluir todos los empleados de GD 16, 17 y 18, así como los reasignados a Vicefiscalía
-            $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId, $employeesVicefiscalia) {
-                $employee->where(function ($q) use ($generalDirectionId, $employeesVicefiscalia) {
+            $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId, $employeesVLCPC, $employeesVicefiscalia) {
+                $employee->where(function ($q) use ($generalDirectionId, $employeesVLCPC, $employeesVicefiscalia) {
                     $q->whereIn('general_direction_id', [16, 17, 18])
-                        ->orWhereIn('employee_number', $employeesVicefiscalia);
+                        ->orWhereIn('employee_number', array_merge($employeesVLCPC, $employeesVicefiscalia));
                 });
             });
         } elseif ($generalDirectionId == 17) {
