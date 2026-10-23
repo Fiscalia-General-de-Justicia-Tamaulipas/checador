@@ -8,6 +8,7 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link } from '@inertiajs/vue3';
 
 const showingNavigationDropdown = ref(false);
+const showingAttendanceNotice = ref(true);
 </script>
 
 <template>
@@ -130,6 +131,40 @@ const showingNavigationDropdown = ref(false);
         </nav>
 
         <div class="flex flex-col h-full overflow-y-auto">
+            <div
+                v-if="showingAttendanceNotice"
+                class="border-b border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100 sm:px-6"
+                role="alert"
+            >
+                <div class="mx-auto flex max-w-screen-2xl items-start gap-3">
+                    <svg
+                        class="mt-0.5 h-5 w-5 shrink-0"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-4a.75.75 0 00-.75.75v3.5a.75.75 0 001.5 0v-3.5A.75.75 0 0010 6zm0 7a1 1 0 100 2 1 1 0 000-2z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                    <p class="flex-1 text-sm leading-6">
+                        <span class="font-semibold">Aviso sobre los registros de asistencia:</span>
+                        La información disponible corresponde a los registros del 22 de octubre. Debido al mantenimiento actual de la base de datos, las checadas realizadas a partir del 23 de octubre se guardan localmente en el checador de cada área y no se perderán. Cuando se restablezca el servicio, se sincronizarán y aparecerán en el sistema central. Agradecemos su comprensión.
+                    </p>
+                    <button
+                        type="button"
+                        class="-mr-1 -mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-amber-800 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-600 dark:text-amber-200 dark:hover:bg-amber-900"
+                        aria-label="Cerrar aviso sobre los registros de asistencia"
+                        @click="showingAttendanceNotice = false"
+                    >
+                        <span aria-hidden="true" class="text-2xl leading-none">&times;</span>
+                    </button>
+                </div>
+            </div>
+
             <!-- Page Heading -->
             <header class="bg-white dark:bg-gray-800 shadow" v-if="$slots.header">
                 <div class="uppercase max-w-7xl mx-auto py-2 px-4 sm:px-6 lg:px-8">
