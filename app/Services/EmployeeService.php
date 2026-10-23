@@ -38,6 +38,13 @@ class EmployeeService
             //20902, // BRENDA LIZZETH SANCHEZ PICASSO
             10829, // HOMERO GONZALEZ SANCHEZ
             7057,  // MA. IGNACIA RUIZ RETA
+            41611,
+            48853,
+            55506,
+            33539,
+            36533,
+            32981,
+            55136,
         ];
 
         $employeesVicefiscalia = [
@@ -71,9 +78,9 @@ class EmployeeService
                     }
                     // GD = 16: Incluir todos los empleados de GD 16, 17 y 18, así como los empleados reasignados a Vicefiscalía
                     elseif ($generalDirectionId == 16) {
-                        $query->where(function ($q) use ($employeesVicefiscalia) {
+                        $query->where(function ($q) use ($employeesVLCPC, $employeesVicefiscalia) {
                             $q->whereIn('general_direction_id', [16, 17, 18])
-                                ->orWhereIn('employee_number', $employeesVicefiscalia);
+                                ->orWhereIn('employee_number', array_merge($employeesVLCPC, $employeesVicefiscalia));
                         });
                     }
                     // GD = 17: Incluir empleados específicos (que normalmente estarían en GD 18)
@@ -119,9 +126,9 @@ class EmployeeService
                     $query->where('general_direction_id', 18)
                         ->whereNotIn('employee_number', array_merge($employeesVLCPC, $employeesVicefiscalia, $employeesProcesos));
                 } elseif ($userGeneralDirectionId == 16) {
-                    $query->where(function ($q) use ($employeesVicefiscalia) {
+                    $query->where(function ($q) use ($employeesVLCPC, $employeesVicefiscalia) {
                         $q->whereIn('general_direction_id', [16, 17, 18])
-                            ->orWhereIn('employee_number', $employeesVicefiscalia);
+                            ->orWhereIn('employee_number', array_merge($employeesVLCPC, $employeesVicefiscalia));
                     });
                 } elseif ($userGeneralDirectionId == 17) {
                     $query->where(function ($q) use ($employeesProcesos) {
@@ -140,9 +147,9 @@ class EmployeeService
                         $query->where('general_direction_id', 18)
                             ->whereNotIn('employee_number', array_merge($employeesVLCPC, $employeesVicefiscalia, $employeesProcesos));
                     } elseif ($generalDirectionId == 16) {
-                        $query->where(function ($q) use ($employeesVicefiscalia) {
+                        $query->where(function ($q) use ($employeesVLCPC, $employeesVicefiscalia) {
                             $q->whereIn('general_direction_id', [16, 17, 18])
-                                ->orWhereIn('employee_number', $employeesVicefiscalia);
+                                ->orWhereIn('employee_number', array_merge($employeesVLCPC, $employeesVicefiscalia));
                         });
                     } elseif ($generalDirectionId == 17) {
                         $query->where(function ($q) use ($employeesProcesos) {
@@ -214,6 +221,13 @@ class EmployeeService
             //20902, // BRENDA LIZZETH SANCHEZ PICASSO
             10829, // HOMERO GONZALEZ SANCHEZ
             7057,  // MA. IGNACIA RUIZ RETA
+            41611,
+            48853,
+            55506,
+            33539,
+            36533,
+            32981,
+            55136,
         ];
 
         $employeesVicefiscalia = [
