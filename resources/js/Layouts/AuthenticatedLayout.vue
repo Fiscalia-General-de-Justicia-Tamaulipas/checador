@@ -131,6 +131,7 @@ const showingAttendanceNotice = ref(true);
         </nav>
 
         <div class="flex flex-col h-full overflow-y-auto">
+            <!--
             <div
                 v-if="showingAttendanceNotice"
                 class="border-b border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100 sm:px-6"
@@ -164,7 +165,7 @@ const showingAttendanceNotice = ref(true);
                     </button>
                 </div>
             </div>
-
+-->
             <!-- Page Heading -->
             <header class="bg-white dark:bg-gray-800 shadow" v-if="$slots.header">
                 <div class="uppercase max-w-7xl mx-auto py-2 px-4 sm:px-6 lg:px-8">
