@@ -38,21 +38,21 @@ class ValidateAccessEmployee
      */
     public static function getAllowedGeneralDirectionIds(User $user): array
     {
-        if ($user->level_id == 1) {
+        if ((int) $user->level_id == 1) {
             return [];
         }
 
-        $allowedGdIds = [$user->general_direction_id];
+        $allowedGdIds = [(int) $user->general_direction_id];
 
-        if ($user->general_direction_id == 12) {
+        if ((int) $user->general_direction_id == 12) {
             return [11, 12, 13, 14];
         }
 
-        if ($user->general_direction_id == 16) {
+        if ((int) $user->general_direction_id == 16) {
             return [16, 17, 18];
         }
 
-        if ($user->general_direction_id == 17) {
+        if ((int) $user->general_direction_id == 17) {
             return [17, 18];
         }
 
@@ -64,7 +64,7 @@ class ValidateAccessEmployee
         $allowedGeneralDirections = self::getAllowedGeneralDirectionIds($user);
 
         return !empty($allowedGeneralDirections)
-            && in_array($employee->general_direction_id, $allowedGeneralDirections, true);
+            && in_array((int) $employee->general_direction_id, $allowedGeneralDirections, true);
     }
 
     /**
@@ -75,14 +75,14 @@ class ValidateAccessEmployee
     static function validateUser(User $user, Employee $employee)
     {
         // Los administradores (level_id = 1) tienen acceso a todo
-        if ($user->level_id == 1) {
+        if ((int) $user->level_id == 1) {
             return true;
         }
 
         $__hasAccess = true;
 
-        if ($user->level_id > 1) {
-            $__currentLevel = $user->level_id;
+        if ((int) $user->level_id > 1) {
+            $__currentLevel = (int) $user->level_id;
 
             // Verificar reglas especiales primero
             if ($__hasAccess && self::checkSpecialRules($user, $employee)) {
@@ -99,7 +99,7 @@ class ValidateAccessEmployee
             if ($__currentLevel >= 3 && $__hasAccess) {
                 if (!self::hasGeneralDirectionScopeAccess($user, $employee)) {
                     $__hasAccess = false;
-                } elseif ($user->direction_id != $employee->direction_id && !self::hasGeneralDirectionScopeAccess($user, $employee)) {
+                } elseif ($user->direction_id != $employee->direction_id) {
                     $__hasAccess = false;
                 }
             }
@@ -107,7 +107,7 @@ class ValidateAccessEmployee
             if ($__currentLevel >= 4 && $__hasAccess) {
                 if (!self::hasGeneralDirectionScopeAccess($user, $employee)) {
                     $__hasAccess = false;
-                } elseif ($user->subdirectorate_id != $employee->subdirectorate_id && !self::hasGeneralDirectionScopeAccess($user, $employee)) {
+                } elseif ($user->subdirectorate_id != $employee->subdirectorate_id) {
                     $__hasAccess = false;
                 }
             }
