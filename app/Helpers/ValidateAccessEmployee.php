@@ -11,13 +11,16 @@ class ValidateAccessEmployee
     private const EMPLOYEES_VLCPC = [
         //20902, // BRENDA LIZZETH SANCHEZ PICASSO
         10829, // HOMERO GONZALEZ SANCHEZ
+        48461, // YARAHI JOSELIN SILVERIO DUQUE
         7057,  // MA. IGNACIA RUIZ RETA
-    ];
-
-    private const EMPLOYEES_VICEFISCALIA = [
-        36196, // CESAR EDUARDO ACOSTA SIERRA
-        25904, // FRANCISCO JAVIER VALLEJO GARCIA
-        25823, // MIRNA ELIZABETH RODRIGUEZ CANO
+        20882, // YESENIA COLUNGA BRISEÑO
+        41611,
+        48853,
+        55506,
+        33539,
+        36533,
+        32981,
+        55136,
     ];
 
     private const EMPLOYEES_PROCESOS = [
@@ -29,6 +32,40 @@ class ValidateAccessEmployee
         22515, // SANTANA MARQUEZ LOPEZ
         28875, // MARIA DE LOURDES ARRATIA MALDONADO
     ];
+
+    /**
+     * Obtener las direcciones generales que un usuario puede consultar.
+     */
+    public static function getAllowedGeneralDirectionIds(User $user): array
+    {
+        if ($user->level_id == 1) {
+            return [];
+        }
+
+        $allowedGdIds = [$user->general_direction_id];
+
+        if ($user->general_direction_id == 12) {
+            return [11, 12, 13, 14];
+        }
+
+        if ($user->general_direction_id == 16) {
+            return [16, 17, 18];
+        }
+
+        if ($user->general_direction_id == 17) {
+            return [17, 18];
+        }
+
+        return $allowedGdIds;
+    }
+
+    private static function hasGeneralDirectionScopeAccess(User $user, Employee $employee): bool
+    {
+        $allowedGeneralDirections = self::getAllowedGeneralDirectionIds($user);
+
+        return !empty($allowedGeneralDirections)
+            && in_array($employee->general_direction_id, $allowedGeneralDirections, true);
+    }
 
     /**
      * validate if the user has access to the employee
@@ -54,19 +91,23 @@ class ValidateAccessEmployee
 
             // Reglas normales de jerarquía
             if ($__currentLevel >= 2) {
-                if ($user->general_direction_id != $employee->general_direction_id) {
+                if (!self::hasGeneralDirectionScopeAccess($user, $employee)) {
                     $__hasAccess = false;
                 }
             }
 
             if ($__currentLevel >= 3 && $__hasAccess) {
-                if ($user->direction_id != $employee->direction_id) {
+                if (!self::hasGeneralDirectionScopeAccess($user, $employee)) {
+                    $__hasAccess = false;
+                } elseif ($user->direction_id != $employee->direction_id && !self::hasGeneralDirectionScopeAccess($user, $employee)) {
                     $__hasAccess = false;
                 }
             }
 
             if ($__currentLevel >= 4 && $__hasAccess) {
-                if ($user->subdirectorate_id != $employee->subdirectorate_id) {
+                if (!self::hasGeneralDirectionScopeAccess($user, $employee)) {
+                    $__hasAccess = false;
+                } elseif ($user->subdirectorate_id != $employee->subdirectorate_id && !self::hasGeneralDirectionScopeAccess($user, $employee)) {
                     $__hasAccess = false;
                 }
             }
@@ -87,16 +128,16 @@ class ValidateAccessEmployee
     private static function checkSpecialRules(User $user, Employee $employee)
     {
         $userGeneralDirectionId = $user->general_direction_id;
-        $employeeNumber = $employee->employee_number;
+        $employeeNumber = (int) ($employee->employee_number ?? $employee->employeeNumber());
         $employeeGeneralDirectionId = $employee->general_direction_id;
 
         // Caso 1: Usuario de GD 16 (VLCPC) puede ver empleados de GD 17 y 18
         if ($userGeneralDirectionId == 16) {
-            if (
-                $employeeGeneralDirectionId == 17 ||
-                $employeeGeneralDirectionId == 18 ||
-                in_array($employeeNumber, self::EMPLOYEES_VICEFISCALIA)
-            ) {
+            if (in_array($employeeNumber, self::EMPLOYEES_VLCPC, true)) {
+                return true;
+            }
+
+            if ($employeeGeneralDirectionId == 17 || $employeeGeneralDirectionId == 18) {
                 return true;
             }
         }
@@ -112,7 +153,6 @@ class ValidateAccessEmployee
         if ($userGeneralDirectionId == 18) {
             if (
                 in_array($employeeNumber, self::EMPLOYEES_VLCPC) ||
-                in_array($employeeNumber, self::EMPLOYEES_VICEFISCALIA) ||
                 in_array($employeeNumber, self::EMPLOYEES_PROCESOS)
             ) {
                 return false;
@@ -131,7 +171,7 @@ class ValidateAccessEmployee
     static function getExcludedEmployees(int $generalDirectionId)
     {
         if ($generalDirectionId == 18) {
-            return array_merge(self::EMPLOYEES_VLCPC, self::EMPLOYEES_VICEFISCALIA, self::EMPLOYEES_PROCESOS);
+            return array_merge(self::EMPLOYEES_VLCPC, self::EMPLOYEES_PROCESOS);
         }
 
         return [];
@@ -146,7 +186,7 @@ class ValidateAccessEmployee
     static function getIncludedEmployees(int $generalDirectionId)
     {
         if ($generalDirectionId == 16) {
-            return array_merge(self::EMPLOYEES_VLCPC, self::EMPLOYEES_VICEFISCALIA);
+            return self::EMPLOYEES_VLCPC;
         }
 
         if ($generalDirectionId == 17) {
