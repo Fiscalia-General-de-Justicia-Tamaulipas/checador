@@ -710,17 +710,23 @@ class IncidentController extends Controller
             $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId, $userGeneralDirectionId, $employeesProcesos, $employeesVLCPC, $employeesVicefiscalia) {
                 if ($userGeneralDirectionId == 17) {
                     // Usuario de GD 17 viendo GD 18: mostrar solo EMPLOYEES_PROCESOS
-                    $employee->whereIn('employee_number', $employeesProcesos);
+                    $employee->where('status_id', 1)
+                        ->where('active', 1)
+                        ->whereIn('employee_number', $employeesProcesos);
                 } else {
                     // Otros usuarios: excluir empleados especiales
-                    $employee->where('general_direction_id', $generalDirectionId)
+                    $employee->where('status_id', 1)
+                        ->where('active', 1)
+                        ->where('general_direction_id', $generalDirectionId)
                         ->whereNotIn('employee_number', array_merge($employeesVLCPC, $employeesVicefiscalia, $employeesProcesos));
                 }
             });
         } elseif ($generalDirectionId == 16) {
             // GD 16: Incluir todos los empleados de GD 16, 17 y 18, así como los reasignados a Vicefiscalía
             $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId, $employeesVLCPC, $employeesVicefiscalia) {
-                $employee->where(function ($q) use ($generalDirectionId, $employeesVLCPC, $employeesVicefiscalia) {
+                $employee->where('status_id', 1)
+                    ->where('active', 1)
+                    ->where(function ($q) use ($generalDirectionId, $employeesVLCPC, $employeesVicefiscalia) {
                     $q->whereIn('general_direction_id', [16, 17, 18])
                         ->orWhereIn('employee_number', array_merge($employeesVLCPC, $employeesVicefiscalia));
                 });
@@ -728,7 +734,9 @@ class IncidentController extends Controller
         } elseif ($generalDirectionId == 17) {
             // GD 17: Incluir empleados de GD 17 + EMPLOYEES_PROCESOS de GD 18
             $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId, $employeesProcesos) {
-                $employee->where(function ($q) use ($generalDirectionId, $employeesProcesos) {
+                $employee->where('status_id', 1)
+                    ->where('active', 1)
+                    ->where(function ($q) use ($generalDirectionId, $employeesProcesos) {
                     $q->where('general_direction_id', $generalDirectionId)
                         ->orWhereIn('employee_number', $employeesProcesos);
                 });
@@ -736,7 +744,9 @@ class IncidentController extends Controller
         } else {
             // Resto de GDs: Comportamiento normal
             $incidentsQuery->whereHas("employee", function ($employee) use ($generalDirectionId) {
-                $employee->where('general_direction_id', $generalDirectionId);
+                $employee->where('status_id', 1)
+                    ->where('active', 1)
+                    ->where('general_direction_id', $generalDirectionId);
             });
         }
 
@@ -749,7 +759,10 @@ class IncidentController extends Controller
         $employeesQuery = Employee::with([
             'generalDirection',
             'direction'
-        ])->whereIn('id', array_keys($groupedByEmployee));
+        ])
+            ->where('status_id', 1)
+            ->where('active', 1)
+            ->whereIn('id', array_keys($groupedByEmployee));
 
         // * filter employees by the user-level
         if (Auth::user()->level_id > 2) {
