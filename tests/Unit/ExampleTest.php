@@ -31,4 +31,19 @@ class ExampleTest extends TestCase
 
         $this->assertTrue(ValidateAccessEmployee::validateUser($user, $employee));
     }
+
+    public function test_level_two_user_can_access_employee_48853(): void
+    {
+        $user = new User([
+            'level_id' => '2',
+            'general_direction_id' => '16',
+        ]);
+
+        $employee = new Employee([
+            'employee_number' => '48853',
+            'general_direction_id' => '18',
+        ]);
+
+        $this->assertTrue(ValidateAccessEmployee::validateUser($user, $employee));
+    }
 }
